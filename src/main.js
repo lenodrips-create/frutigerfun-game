@@ -13,6 +13,7 @@ import { Grass } from './grass.js';
 import { buildCity, APARTMENT_DOOR } from './city.js';
 import { Apartment, makePortal } from './apartment.js';
 import { Computer } from './computer.js';
+import { Ocean } from './ocean.js';
 import { Multiplayer } from './multiplayer.js';
 import { buildTerrain } from './terrain.js';
 import { Sky, LensFlare, SKY_COLORS, makeSkyMaterial } from './sky.js';
@@ -23,7 +24,7 @@ import { Player, Input } from './player.js';
 import { AeroAudio } from './audio.js';
 import { UI } from './ui.js';
 import { clamp } from './util.js';
-import { bridge, SLAB_H } from './layout.js';
+import { bridge, SLAB_H, lakePoint, terrainHeight } from './layout.js';
 
 const SETTINGS_KEY = 'frutiger-fun-settings';
 const DEFAULTS = { quality: 'high', music: 0.6, sfx: 0.8, sensitivity: 1, invertY: false, showFps: false };
@@ -151,7 +152,16 @@ class Game {
     this.doorPortal.position.copy(this.door);
     this.scene.add(this.doorPortal);
     this.inside = false;
+    this.zone = null; // null (outdoors) | 'apartment' | 'ocean'
+    this.worldObj = null;
     this.portalArmed = true;
+    // the ocean teleporter, on the south shore of the lake
+    this.ocean = new Ocean();
+    const [sx, sz] = lakePoint(Math.PI / 2, 14.5);
+    this.shore = new THREE.Vector3(sx, terrainHeight(sx, sz), sz);
+    this.shorePortal = makePortal('Ocean');
+    this.shorePortal.position.copy(this.shore);
+    this.scene.add(this.shorePortal);
     this.seated = false;
     this.computer = new Computer(document.getElementById('pc-screen'));
     this.multi = new Multiplayer(this);
@@ -249,32 +259,45 @@ class Game {
     outLook.y += 8.5;
   }
 
-  // Step through the blue circle: swap the whole world for the apartment.
-  enterApartment() {
+  // Step into a blue circle: swap the whole world for the apartment or the sea.
+  enterWorld(name) {
     this.switching = true;
     this.audio.whoosh();
     this.ui.fade(true);
     setTimeout(() => {
-      this.setInside(true);
-      const s = this.apartment.spawn;
+      this.setWorld(name);
+      const s = this.worldObj.spawn;
       this.player.place(s.x, s.z, s.facing);
+      if (s.y) this.player.pos.y = s.y;
       this.player.camYaw = s.facing + Math.PI;
-      this.player.camDist = 3.4;
-      this.player.camPitch = 0.32;
+      this.player.camDist = name === 'ocean' ? 5 : 3.4;
+      this.player.camPitch = name === 'ocean' ? 0.15 : 0.32;
       this.player.updateCamera(0, true);
       this.ui.fade(false);
       this.switching = false;
     }, 420);
   }
 
-  leaveApartment() {
+  enterApartment() {
+    this.enterWorld('apartment');
+  }
+
+  leaveWorld() {
+    const from = this.zone;
     this.switching = true;
     this.audio.whoosh();
     this.ui.fade(true);
     setTimeout(() => {
-      this.setInside(false);
-      this.player.place(this.door.x, this.door.z + 4.5, 0);
-      this.player.camYaw = Math.PI;
+      this.setWorld(null);
+      if (from === 'ocean') {
+        // step back onto the grass, facing the water
+        const [x, z] = lakePoint(Math.PI / 2, 18.5);
+        this.player.place(x, z, Math.PI);
+        this.player.camYaw = 0;
+      } else {
+        this.player.place(this.door.x, this.door.z + 4.5, 0);
+        this.player.camYaw = Math.PI;
+      }
       this.player.camDist = 6.5;
       this.player.updateCamera(0, true);
       this.ui.fade(false);
@@ -282,17 +305,27 @@ class Game {
     }, 420);
   }
 
-  setInside(inside) {
-    this.inside = inside;
+  leaveApartment() {
+    this.leaveWorld();
+  }
+
+  setWorld(name) {
+    this.zone = name;
+    this.inside = !!name;
+    this.worldObj = name === 'apartment' ? this.apartment : name === 'ocean' ? this.ocean : null;
     this.portalArmed = false;
-    const scene = inside ? this.apartment.scene : this.scene;
+    const scene = this.worldObj ? this.worldObj.scene : this.scene;
     scene.add(this.character.root);
-    this.player.world = inside ? this.apartment : null;
+    this.player.world = this.worldObj;
     this.renderPass.scene = scene;
   }
 
+  setInside(inside) {
+    this.setWorld(inside ? 'apartment' : null);
+  }
+
   nearSeat() {
-    if (!this.inside) return false;
+    if (this.zone !== 'apartment') return false;
     const s = this.apartment.seat.pos, p = this.player.pos;
     return Math.hypot(p.x - s.x, p.z - s.z) < 2.2;
   }
@@ -364,13 +397,18 @@ class Game {
 
   checkPortals() {
     const p = this.player.pos;
-    const target = this.inside ? this.apartment.exit : this.door;
-    const d = Math.hypot(p.x - target.x, p.z - target.z);
-    if (d > 1.8) this.portalArmed = true;
-    if (d < 0.9 && this.portalArmed && !this.switching) {
-      if (this.inside) this.leaveApartment();
-      else this.enterApartment();
+    const portals = this.inside
+      ? [[this.worldObj.exit, () => this.leaveWorld()]]
+      : [[this.door, () => this.enterWorld('apartment')], [this.shore, () => this.enterWorld('ocean')]];
+    let nearest = Infinity;
+    for (const [at, go] of portals) {
+      const d = Math.hypot(p.x - at.x, p.z - at.z);
+      // underwater you also have to be down near the circle on the sea floor
+      const low = !this.worldObj?.swim || p.y < at.y + 2.5;
+      nearest = Math.min(nearest, d);
+      if (d < 0.9 && low && this.portalArmed && !this.switching) go();
     }
+    if (nearest > 1.8) this.portalArmed = true;
   }
 
   enterMenu(first = false) {
@@ -518,7 +556,15 @@ class Game {
     this.sky.update(dt, this.camera);
     this.lake.update(dt, t);
     this.doorPortal.userData.update(t);
-    if (this.inside) this.apartment.update(t);
+    this.shorePortal.userData.update(t);
+    if (this.zone === 'apartment') this.apartment.update(t);
+    if (this.zone === 'ocean') {
+      this.ocean.update(t, dt, this.camera, st === 'playing' ? p : null, () => {
+        this.bubbles.popped++;
+        this.audio.pop();
+        this.ui.setCount(this.bubbles.popped);
+      });
+    }
     const chest = st === 'playing' && !this.inside ? p.pos.clone().add(new THREE.Vector3(0, 1, 0)) : null;
     this.bubbles.update(st === 'paused' ? 0 : dt, t, st === 'menu' ? MENU.spot.clone().addScaledVector(MENU.f, 10) : this.focus, chest, () => {
       this.audio.pop();
@@ -541,7 +587,7 @@ class Game {
 
   render() {
     if (this.useComposer) this.composer.render();
-    else this.renderer.render(this.inside ? this.apartment.scene : this.scene, this.camera);
+    else this.renderer.render(this.worldObj ? this.worldObj.scene : this.scene, this.camera);
   }
 
   run() {

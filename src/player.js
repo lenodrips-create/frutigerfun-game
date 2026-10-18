@@ -129,12 +129,18 @@ export class Player {
     this.vel.x = lerp(this.vel.x, mx * speed, kk);
     this.vel.z = lerp(this.vel.z, mz * speed, kk);
 
-    if (inp.jump && this.grounded) {
-      this.vel.y = JUMP;
-      this.grounded = false;
-      this.onJump?.();
+    if (this.world?.swim) {
+      // underwater: hold Space to swim up, let go to sink slowly
+      const up = active && this.input.down('Space');
+      this.vel.y = lerp(this.vel.y, up ? 3.4 : -1.1, 1 - Math.exp(-3 * dt));
+    } else {
+      if (inp.jump && this.grounded) {
+        this.vel.y = JUMP;
+        this.grounded = false;
+        this.onJump?.();
+      }
+      this.vel.y -= GRAVITY * dt;
     }
-    this.vel.y -= GRAVITY * dt;
 
     // horizontal move; if the way is blocked by water (or a ledge), try
     // turning a little so we slide along the edge instead of sticking
@@ -165,6 +171,10 @@ export class Player {
 
     const ground = this.groundAt(p.x, p.z);
     p.y += this.vel.y * dt;
+    if (this.world?.swim && p.y > this.world.ceiling) {
+      p.y = this.world.ceiling;
+      this.vel.y = Math.min(this.vel.y, 0);
+    }
     if (p.y <= ground || (this.grounded && p.y - ground < 0.35 && this.vel.y <= 0)) {
       p.y = ground;
       this.vel.y = 0;

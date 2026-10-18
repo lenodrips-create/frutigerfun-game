@@ -4,7 +4,7 @@ import { Character } from './character.js';
 // Online play. Connects to the Frutiger Fun server (a Ruby WebSocket hub),
 // sends where you are ten times a second, and shows everyone else as a
 // coloured buddy with a name tag. You only see players in the same place as
-// you: out in the city, or in the apartment.
+// you: out in the city, in the apartment, or under the sea.
 //
 // The server address comes from <meta name="frutiger-server"> in index.html,
 // or ?server=wss://... in the page address. With neither, the game is
@@ -175,7 +175,7 @@ export class Multiplayer {
         const p = g.player.pos, st = g.character.state;
         this.ws.send(JSON.stringify({
           type: 'state', x: p.x, y: p.y, z: p.z, facing: g.player.facing,
-          speed: st.speed, grounded: st.grounded, inside: g.inside, wave: st.wave, seated: g.seated,
+          speed: st.speed, grounded: st.grounded, inside: g.zone === 'apartment', ocean: g.zone === 'ocean', wave: st.wave, seated: g.seated,
         }));
       }
     }
@@ -185,14 +185,15 @@ export class Multiplayer {
       const t = r.target;
       if (!t) continue;
       const root = r.ch.root;
-      const scene = t.inside ? g.apartment.scene : g.scene;
+      const zone = t.ocean ? 'ocean' : t.inside ? 'apartment' : null;
+      const scene = zone === 'ocean' ? g.ocean.scene : zone === 'apartment' ? g.apartment.scene : g.scene;
       if (root.parent !== scene) scene.add(root);
-      root.visible = !!t.inside === !!g.inside;
-      if (!r.ready || r.inside !== t.inside) {
+      root.visible = zone === (g.zone ?? null);
+      if (!r.ready || r.inside !== zone) {
         root.position.set(t.x, t.y, t.z);
         root.rotation.y = t.facing;
         r.ready = true;
-        r.inside = t.inside;
+        r.inside = zone;
       } else {
         root.position.lerp(new THREE.Vector3(t.x, t.y, t.z), k);
         let d = t.facing - root.rotation.y;

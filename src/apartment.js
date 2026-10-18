@@ -17,7 +17,7 @@ const TAU = Math.PI * 2;
 
 // ---- a glowing blue circle you step into -----------------------------------
 
-export function makePortal() {
+export function makePortal(label = 'Apartment') {
   const g = new THREE.Group();
   const disc = new THREE.Mesh(
     new THREE.CircleGeometry(1.05, 48),
@@ -62,7 +62,8 @@ export function makePortal() {
     g.font = '800 64px Nunito, sans-serif';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.fillText('Apartment', w / 2, h / 2 + 4);
+    g.font = `800 ${label.length > 10 ? 52 : 64}px Nunito, sans-serif`;
+    g.fillText(label, w / 2, h / 2 + 4);
   }), transparent: true, depthWrite: false }));
   sign.scale.set(3.2, 0.8, 1);
   sign.position.y = 3.6;
@@ -398,7 +399,7 @@ export class Apartment {
     this.buildDesk(add);
 
     // exit circle by the door
-    this.portal = makePortal();
+    this.portal = makePortal('Exit');
     this.portal.position.copy(this.exit);
     scene.add(this.portal);
 

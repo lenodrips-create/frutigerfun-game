@@ -65,6 +65,12 @@ Touch a bubble to pop it. The counter is at the top left.
   and you see the people who are in the same place as you (the city or the
   apartment). The top right shows who you are and how many are online.
   The server is written in Ruby and lives in a separate private repository.
+- **The ocean:** a blue teleporter marked "Ocean" stands on the lakeside
+  path, south of the lake. Step in to dive into open blue water: clownfish
+  and butterflyfish swim in schools, glass bubbles float (pop them too),
+  light rays shine down from the rippling surface, and seaweed sways over
+  the sand. Hold **Space** to swim up; let go to sink. The "Back to land"
+  circle on the sea floor takes you back.
 - **Cursors:** pixel-art arrow and pointing-hand cursors in the menus.
 - **Grass:** real grass blades that sway in the wind cover the lawns and
   fields around you.
@@ -102,6 +108,7 @@ Touch a bubble to pop it. The counter is at the top left.
 | `src/ui.js`, `src/style.css` | menus, windows and HUD |
 | `src/windmills.js` | wind turbines |
 | `src/multiplayer.js` | online play: talks to the Ruby server and shows other players |
+| `src/ocean.js` | the underwater world |
 | `src/computer.js` | the apartment computer running the Scratch project |
 | `src/apartment.js` | the apartment interior, its furniture and the blue entrance circles |
 | `src/cursors.css` | the pixel-art cursors |

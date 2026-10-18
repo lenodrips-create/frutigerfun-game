@@ -47,7 +47,10 @@ const fragmentShader = /* glsl */ `
   }`;
 
 export class Bubbles {
-  constructor(scene, sunDir, count = 70) {
+  // opts.ground(x, z): floor height; opts.top: how far above it bubbles rise
+  constructor(scene, sunDir, count = 70, opts = {}) {
+    this.ground = opts.ground ?? walkHeight;
+    this.top = opts.top ?? 24;
     this.count = count;
     const geo = new THREE.SphereGeometry(1, 28, 18);
     this.alpha = new Float32Array(count).fill(1);
@@ -77,7 +80,7 @@ export class Bubbles {
     const a = Math.random() * Math.PI * 2;
     const d = 4 + Math.sqrt(Math.random()) * this.radius;
     const x = this.center.x + Math.cos(a) * d, z = this.center.z + Math.sin(a) * d;
-    const g = walkHeight(x, z);
+    const g = this.ground(x, z);
     b.pos.set(x, g + (initial ? 0.6 + Math.random() * 14 : 0.3 + Math.random() * 2), z);
     b.r = 0.3 + Math.random() ** 2 * 1.1;
     b.phase = Math.random() * 10;
@@ -109,9 +112,9 @@ export class Bubbles {
         b.pos.x += Math.sin(t * 0.7 + b.phase) * 0.35 * dt;
         b.pos.z += Math.cos(t * 0.6 + b.phase * 1.3) * 0.35 * dt;
         const far = Math.hypot(b.pos.x - center.x, b.pos.z - center.z) > this.radius + 15;
-        if (b.pos.y > b.ground + 24 || far) this.spawn(b, false);
+        if (b.pos.y > b.ground + this.top || far) this.spawn(b, false);
         // fade in near the ground, out near the top
-        alpha = Math.min(1, (b.pos.y - b.ground) / 1.2, (b.ground + 24 - b.pos.y) / 4);
+        alpha = Math.min(1, (b.pos.y - b.ground) / 1.2, (b.ground + this.top - b.pos.y) / 4);
         if (target && b.pos.distanceTo(target) < b.r + 0.75) {
           b.pop = 0;
           this.popped++;
