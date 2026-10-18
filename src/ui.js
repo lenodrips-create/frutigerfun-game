@@ -176,6 +176,11 @@ export class UI {
     $('hud-fps').textContent = text;
   }
 
+  online(text) {
+    const el = $('hud-online');
+    if (el.textContent !== text) el.textContent = text;
+  }
+
   prompt(text) {
     const el = $('hud-prompt');
     if (el.textContent !== text) el.textContent = text;

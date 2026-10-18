@@ -13,6 +13,7 @@ import { Grass } from './grass.js';
 import { buildCity, APARTMENT_DOOR } from './city.js';
 import { Apartment, makePortal } from './apartment.js';
 import { Computer } from './computer.js';
+import { Multiplayer } from './multiplayer.js';
 import { buildTerrain } from './terrain.js';
 import { Sky, LensFlare, SKY_COLORS, makeSkyMaterial } from './sky.js';
 import { Lake } from './water.js';
@@ -153,6 +154,7 @@ class Game {
     this.portalArmed = true;
     this.seated = false;
     this.computer = new Computer(document.getElementById('pc-screen'));
+    this.multi = new Multiplayer(this);
     document.getElementById('pc-screen').addEventListener('mousedown', () => this.computer.click());
     addEventListener('keydown', (e) => {
       if (e.code === 'KeyE' && this.state === 'playing' && !this.seated && this.nearSeat()) this.sit();
@@ -372,6 +374,7 @@ class Game {
   }
 
   enterMenu(first = false) {
+    if (!first) this.multi.disconnect();
     if (this.seated) this.standUp();
     if (this.inside) this.setInside(false);
     this.ui.prompt('');
@@ -412,6 +415,7 @@ class Game {
     this.bubbles.popped = 0;
     this.ui.setCount(0);
     this.canvas.requestPointerLock?.();
+    this.multi.connect();
   }
 
   pause() {
@@ -507,6 +511,7 @@ class Game {
     this.character.update(st === 'paused' ? 0 : dt);
     this.foliage.update(t);
     this.windmills.update(st === 'paused' ? 0 : dt);
+    this.multi.update(dt);
     const grassAt = st === 'menu' || st === 'goodbye' ? this.camera.position.clone().addScaledVector(MENU.f, 14) : this.focus;
     this.grass.update(t, grassAt);
     this.grassFar.update(t, grassAt);

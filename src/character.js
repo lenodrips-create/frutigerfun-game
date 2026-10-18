@@ -10,17 +10,28 @@ import { clamp, lerp } from './util.js';
 // Character V2" exported as glTF), it is loaded and used instead.
 
 // Glossy jelly: cyan glow facing the camera, a dark blue outline at the rim.
-function jelly(color) {
+// edge: the dark outline colour; mid: the body; glow: the bright centre.
+// Defaults are the classic messenger blue; other players get their own hue.
+function jelly(color, glow) {
   const m = new THREE.MeshPhysicalMaterial({
     color, roughness: 0.15, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.03,
-    emissive: 0x0060ff, emissiveIntensity: 0.25,
+    emissive: color, emissiveIntensity: 0.12,
   });
+  const base = new THREE.Color(color);
+  const uniforms = {
+    uEdge: { value: base.clone().multiplyScalar(0.18) },
+    uMid: { value: base.clone() },
+    uGlow: { value: new THREE.Color(glow ?? base.clone().lerp(new THREE.Color(1, 1, 1), 0.45)) },
+  };
   m.onBeforeCompile = (sh) => {
-    sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', `
+    Object.assign(sh.uniforms, uniforms);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('void main() {', 'uniform vec3 uEdge, uMid, uGlow;\nvoid main() {')
+      .replace('#include <opaque_fragment>', `
       // paint the icon gradient ourselves, keep only the light's shading and gloss
       float facing = clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
-      vec3 jellyCol = mix(vec3(0.0, 0.025, 0.2), vec3(0.0, 0.2, 0.95), smoothstep(0.04, 0.42, facing));
-      jellyCol = mix(jellyCol, vec3(0.08, 0.85, 1.0), pow(facing, 3.5) * 0.75);
+      vec3 jellyCol = mix(uEdge, uMid, smoothstep(0.04, 0.42, facing));
+      jellyCol = mix(jellyCol, uGlow, pow(facing, 3.5) * 0.75);
       float lit = dot(totalDiffuse, vec3(0.333)) / max(dot(diffuseColor.rgb, vec3(0.333)), 0.001);
       vec3 gloss = totalSpecular;
       #ifdef USE_CLEARCOAT
@@ -29,11 +40,11 @@ function jelly(color) {
       outgoingLight = jellyCol * clamp(lit * 0.35, 0.6, 1.15) + gloss * 0.7;
       #include <opaque_fragment>`);
   };
-  m.customProgramCacheKey = () => 'aero-jelly';
   return m;
 }
 
-const mat = { body: jelly(0x0a6cff) };
+// the classic blue: navy edge, blue body, cyan glow
+const mat = { body: jelly(0x0a6cff, 0x14d9ff) };
 
 function part(parent, geo, material, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) {
   const m = new THREE.Mesh(geo, material);
@@ -52,7 +63,9 @@ function pivot(parent, x, y, z) {
 }
 
 export class Character {
-  constructor() {
+  // color: body colour for other players' characters (yours is blue)
+  constructor({ color } = {}) {
+    this.body = color ? jelly(color) : mat.body;
     this.root = new THREE.Group();
     this.state = { speed: 0, grounded: true, vy: 0, wave: false };
     this.phase = 0;
@@ -73,13 +86,13 @@ export class Character {
     const profile = [[0, 0], [0.4, 0], [0.47, 0.03], [0.5, 0.1], [0.5, 0.36], [0.48, 0.58], [0.42, 0.76], [0.31, 0.89], [0.16, 0.96], [0, 0.98]]
       .map(([r, y]) => new THREE.Vector2(r, y));
     const bell = new THREE.LatheGeometry(new THREE.SplineCurve(profile).getPoints(40), 48);
-    part(torso, bell, mat.body, 0, 0, 0, 1, 1, 0.82);
+    part(torso, bell, this.body, 0, 0, 0, 1, 1, 0.82);
     this.head = pivot(torso, 0, 1.0, 0);
-    part(this.head, new THREE.SphereGeometry(0.33, 48, 32), mat.body, 0, 0.3, 0);
+    part(this.head, new THREE.SphereGeometry(0.33, 48, 32), this.body, 0, 0.3, 0);
     this.arms = [];
     for (const sx of [1, -1]) {
       const shoulder = pivot(torso, sx * 0.43, 0.74, 0);
-      const arm = part(shoulder, new THREE.CapsuleGeometry(0.115, 0.34, 10, 20), mat.body, 0, -0.27, 0, 1, 1, 0.85);
+      const arm = part(shoulder, new THREE.CapsuleGeometry(0.115, 0.34, 10, 20), this.body, 0, -0.27, 0, 1, 1, 0.85);
       arm.rotation.z = sx * 0.08;
       this.arms.push({ shoulder, side: sx });
     }

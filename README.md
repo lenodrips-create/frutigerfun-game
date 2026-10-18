@@ -59,6 +59,12 @@ Touch a bubble to pop it. The counter is at the top left.
   **Esc** to stand up. The project downloads from Scratch the first time
   you sit, so this needs the online version (GitHub Pages or a local web
   server), not the file opened from disk.
+- **Online play:** when a multiplayer server is set (the `frutiger-server`
+  tag in `index.html`), pressing Play connects you. Players are named
+  Player 1, Player 2 and so on, each gets their own colour and a name tag,
+  and you see the people who are in the same place as you (the city or the
+  apartment). The top right shows who you are and how many are online.
+  The server is written in Ruby and lives in a separate private repository.
 - **Cursors:** pixel-art arrow and pointing-hand cursors in the menus.
 - **Grass:** real grass blades that sway in the wind cover the lawns and
   fields around you.
@@ -95,6 +101,7 @@ Touch a bubble to pop it. The counter is at the top left.
 | `src/player.js` | movement, collisions, third-person camera |
 | `src/ui.js`, `src/style.css` | menus, windows and HUD |
 | `src/windmills.js` | wind turbines |
+| `src/multiplayer.js` | online play: talks to the Ruby server and shows other players |
 | `src/computer.js` | the apartment computer running the Scratch project |
 | `src/apartment.js` | the apartment interior, its furniture and the blue entrance circles |
 | `src/cursors.css` | the pixel-art cursors |

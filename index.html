@@ -4,9 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Frutiger Fun</title>
+  <!-- Multiplayer server, e.g. wss://frutigerfun-server.onrender.com/ws. Empty = single player. -->
+  <meta name="frutiger-server" content="">
   <meta name="description" content="Frutiger Fun: a Frutiger Aero free-roam city. Menu screen demo.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g' cx='35%25' cy='30%25'%3E%3Cstop offset='0' stop-color='%23fff'/%3E%3Cstop offset='.45' stop-color='%2392e64e'/%3E%3Cstop offset='1' stop-color='%2319a5e6'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='28' fill='url(%23g)' stroke='%23fff' stroke-width='4'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="dist/frutiger-fun.css?v=0b06d68f3a">
+  <link rel="stylesheet" href="dist/frutiger-fun.css?v=f462136f6e">
 </head>
 <body>
   <canvas id="scene" tabindex="0"></canvas>
@@ -97,7 +99,7 @@
 
   <section id="hud" class="screen">
     <div class="hud-pill glass" id="hud-pill"><span class="hud-bubble"></span><b id="hud-count">0</b><span>bubbles popped</span></div>
-    <div class="hud-corner"><span class="hud-fps" id="hud-fps"></span><span><kbd>Esc</kbd> pause</span></div>
+    <div class="hud-corner"><span class="hud-online" id="hud-online"></span><span class="hud-fps" id="hud-fps"></span><span><kbd>Esc</kbd> pause</span></div>
     <div class="hud-help glass" id="hud-help">
       <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>walk</span>
       <span><kbd>Shift</kbd></span><span>run</span>
@@ -165,6 +167,6 @@
   </div>
 
   <div id="fade"></div>
-  <script src="dist/frutiger-fun.js?v=0b06d68f3a"></script>
+  <script src="dist/frutiger-fun.js?v=f462136f6e"></script>
 </body>
 </html>
