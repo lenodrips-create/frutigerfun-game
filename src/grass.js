@@ -8,8 +8,6 @@ import { mulberry32 } from './util.js';
 // grass here" come from a baked texture of the park; beyond the city it is
 // open grassland everywhere.
 
-const L = 72;
-const DENSITY = 24; // blades per square metre
 
 function bakeGround() {
   const N = 2 * PARK + 1;
@@ -31,16 +29,22 @@ function bakeGround() {
   return tex;
 }
 
+let ground = null;
+
+// L: side of the wrapping square (m); density: blades per square metre;
+// width: blade width (m). A near layer of fine blades and a wide far layer of
+// broader ones together carpet everything you can see.
 export class Grass {
-  constructor(scene) {
-    const count = Math.round(L * L * DENSITY);
+  constructor(scene, { L = 72, density = 24, width = 0.055, seed = 5150, fadeFrom = 0.34 } = {}) {
+    ground ??= bakeGround();
+    const count = Math.round(L * L * density);
     this.count = count;
     // one blade: a tapered strip, x across, y up
     const blade = new THREE.InstancedBufferGeometry();
     blade.setAttribute('position', new THREE.Float32BufferAttribute([-0.5, 0, 0, 0.5, 0, 0, -0.38, 0.45, 0, 0.38, 0.45, 0, -0.18, 0.8, 0, 0.18, 0.8, 0, 0, 1, 0], 3));
     blade.setAttribute('normal', new THREE.Float32BufferAttribute(new Array(21).fill(0).map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
     blade.setIndex([0, 1, 3, 0, 3, 2, 2, 3, 5, 2, 5, 4, 4, 5, 6]);
-    const rnd = mulberry32(5150);
+    const rnd = mulberry32(seed);
     const inst = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
       inst[i * 3] = rnd() * L;
@@ -54,7 +58,7 @@ export class Grass {
     this.uniforms = {
       uCenter: { value: new THREE.Vector2() },
       uTime: { value: 0 },
-      uGround: { value: bakeGround() },
+      uGround: { value: ground },
     };
     const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, side: THREE.DoubleSide });
     mat.onBeforeCompile = (sh) => {
@@ -71,7 +75,7 @@ export class Grass {
         .replace('#include <begin_vertex>', `
           vec2 wp = uCenter + mod(aBlade.xy - uCenter + ${(L / 2).toFixed(1)}, ${L.toFixed(1)}) - ${(L / 2).toFixed(1)};
           float r = aBlade.z;
-          float fade = 1.0 - smoothstep(${(L * 0.34).toFixed(1)}, ${(L * 0.49).toFixed(1)}, length(wp - uCenter));
+          float fade = 1.0 - smoothstep(${(L * fadeFrom).toFixed(1)}, ${(L * 0.49).toFixed(1)}, length(wp - uCenter));
           float h = -0.02, mask = 1.0;
           if (abs(wp.x) < ${PARK.toFixed(1)} && abs(wp.y) < ${PARK.toFixed(1)}) {
             vec4 g = texture2D(uGround, (wp + ${PARK.toFixed(1)} + 0.5) / ${(2 * PARK + 1).toFixed(1)});
@@ -86,7 +90,7 @@ export class Grass {
           vec2 wind = vec2(sin(uTime * 1.7 + wp.x * 0.13 + wp.y * 0.07), cos(uTime * 1.2 + wp.y * 0.15)) * 0.18
                     + (vec2(fract(r * 7.3), fract(r * 13.1)) - 0.5) * 0.5;
           vec3 transformed;
-          transformed.xz = wp + dir * position.x * 0.055 + wind * bend * tall;
+          transformed.xz = wp + dir * position.x * ${width.toFixed(3)} + wind * bend * tall;
           transformed.y = h + position.y * tall;
           vT = position.y;
           vR = r;`)
@@ -98,7 +102,7 @@ export class Grass {
           vec3 tip = mix(vec3(0.34, 0.62, 0.12), vec3(0.55, 0.7, 0.2), fract(vR * 5.7));
           diffuseColor.rgb *= mix(root, tip, smoothstep(0.0, 1.0, vT)) * (0.85 + 0.3 * fract(vR * 17.0));`);
     };
-    mat.customProgramCacheKey = () => 'grass-blades';
+    mat.customProgramCacheKey = () => 'grass-blades-' + L;
     this.mesh = new THREE.Mesh(blade, mat);
     this.mesh.frustumCulled = false;
     this.mesh.receiveShadow = true;

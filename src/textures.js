@@ -114,19 +114,21 @@ export function facadeTexture(kind, seed = 1) {
 
 // Greyscale speckle that breaks up the large ground textures up close.
 export function grassDetailTexture() {
-  const S = 256;
+  const S = 512;
   const c = makeCanvas(S), g = c.getContext('2d');
   const rnd = mulberry32(7);
-  g.fillStyle = 'rgb(128,128,128)';
+  g.fillStyle = 'rgb(110,110,110)';
   g.fillRect(0, 0, S, S);
-  for (let i = 0; i < 2600; i++) {
+  // thousands of short strands leaning every which way, light tips over dark roots
+  for (let i = 0; i < 14000; i++) {
     const x = rnd() * S, y = rnd() * S;
-    const v = 70 + rnd() * 120;
-    g.strokeStyle = `rgba(${v},${v},${v},0.55)`;
-    g.lineWidth = 1 + rnd() * 1.2;
+    const len = 5 + rnd() * 12, lean = (rnd() - 0.5) * 6;
+    const v = 60 + rnd() * 170;
+    g.strokeStyle = `rgba(${v},${v},${v},0.7)`;
+    g.lineWidth = 0.8 + rnd() * 1.2;
     g.beginPath();
     g.moveTo(x, y);
-    g.lineTo(x + (rnd() - 0.5) * 4, y - 3 - rnd() * 6);
+    g.quadraticCurveTo(x + lean * 0.3, y - len * 0.6, x + lean, y - len);
     g.stroke();
   }
   return toTexture(c, { color: false });

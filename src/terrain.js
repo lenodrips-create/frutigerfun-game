@@ -111,7 +111,7 @@ export function buildTerrain(scene, aoSpots) {
   for (let i = 0; i < pos.count; i++) pos.setY(i, terrainHeight(pos.getX(i), pos.getZ(i)));
   geo.computeVertexNormals();
   const splat = toTexture(paintPark(aoSpots), { repeat: false });
-  const parkMat = withDetail(new THREE.MeshStandardMaterial({ map: splat, roughness: 0.95 }), detail, 160, 0.8);
+  const parkMat = withDetail(new THREE.MeshStandardMaterial({ map: splat, roughness: 0.95 }), detail, 70, 0.9);
   const park = new THREE.Mesh(geo, parkMat);
   park.receiveShadow = true;
   scene.add(park);

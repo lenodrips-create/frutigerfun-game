@@ -3,6 +3,8 @@
 //   node build.mjs --watch   rebuild on change
 //   node build.mjs --serve   rebuild on change and serve on http://localhost:8080
 import * as esbuild from 'esbuild';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 const dev = process.argv.includes('--watch') || process.argv.includes('--serve');
 const common = { bundle: true, minify: !dev, target: ['es2022'], logLevel: 'info', legalComments: 'eof' };
@@ -20,4 +22,8 @@ if (dev) {
   }
 } else {
   await Promise.all(builds.map((b) => esbuild.build(b)));
+  // stamp index.html with a content hash so browsers never use a stale copy
+  const hash = createHash('sha1').update(readFileSync('dist/frutiger-fun.js')).update(readFileSync('dist/frutiger-fun.css')).digest('hex').slice(0, 10);
+  const html = readFileSync('index.html', 'utf8').replace(/dist\/frutiger-fun\.(js|css)(\?v=[0-9a-f]+)?/g, `dist/frutiger-fun.$1?v=${hash}`);
+  writeFileSync('index.html', html);
 }

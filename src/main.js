@@ -136,6 +136,7 @@ class Game {
     this.props.build(this.scene);
     this.foliage.build(this.scene);
     this.grass = new Grass(this.scene);
+    this.grassFar = new Grass(this.scene, { L: 230, density: 2.6, width: 0.16, seed: 777, fadeFrom: 0.3 });
     await step(0.78, 'Filling the lake…');
     this.lake = new Lake(this.scene, this.sunDir, 0.5);
     this.bubbles = new Bubbles(this.scene, this.sunDir, 70);
@@ -194,6 +195,7 @@ class Game {
     this.lake.setResolution(high ? 0.5 : 0.3);
     this.useComposer = high;
     this.grass.setQuality(high);
+    this.grassFar.setQuality(high);
   }
 
   settingsChanged(key) {
@@ -345,7 +347,9 @@ class Game {
     this.character.update(st === 'paused' ? 0 : dt);
     this.foliage.update(t);
     this.windmills.update(st === 'paused' ? 0 : dt);
-    this.grass.update(t, st === 'menu' || st === 'goodbye' ? this.camera.position.clone().addScaledVector(MENU.f, 14) : this.focus);
+    const grassAt = st === 'menu' || st === 'goodbye' ? this.camera.position.clone().addScaledVector(MENU.f, 14) : this.focus;
+    this.grass.update(t, grassAt);
+    this.grassFar.update(t, grassAt);
     this.sky.update(dt, this.camera);
     this.lake.update(dt, t);
     const chest = st === 'playing' ? p.pos.clone().add(new THREE.Vector3(0, 1, 0)) : null;
