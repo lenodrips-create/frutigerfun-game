@@ -7,7 +7,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Colliders } from './physics.js';
 import { Foliage } from './nature.js';
 import { Props } from './props.js';
-import { populatePark, MENU } from './park.js';
+import { populatePark, populateCountryside, MENU } from './park.js';
+import { Windmills } from './windmills.js';
 import { buildCity } from './city.js';
 import { buildTerrain } from './terrain.js';
 import { Sky, LensFlare, SKY_COLORS, makeSkyMaterial } from './sky.js';
@@ -42,7 +43,7 @@ function saveSettings(s) {
 // A touch more saturation and a soft vignette, for that glossy postcard look.
 const GradeShader = {
   name: 'AeroGrade',
-  uniforms: { tDiffuse: { value: null }, saturation: { value: 1.12 }, vignette: { value: 0.08 } },
+  uniforms: { tDiffuse: { value: null }, saturation: { value: 1.0 }, vignette: { value: 0.08 } },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
     void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
@@ -121,8 +122,10 @@ class Game {
     this.foliage = new Foliage();
     this.props = new Props();
     this.sky = new Sky(this.scene, this.sunDir);
+    this.windmills = new Windmills(this.scene);
     await step(0.14, 'Planting the park…');
     const ao = populatePark(this);
+    populateCountryside(this);
     await step(0.32, 'Raising the skyline…');
     buildCity(this.scene, this);
     await step(0.52, 'Rolling out the hills…');
@@ -338,6 +341,7 @@ class Game {
 
     this.character.update(st === 'paused' ? 0 : dt);
     this.foliage.update(t);
+    this.windmills.update(st === 'paused' ? 0 : dt);
     this.sky.update(dt, this.camera);
     this.lake.update(dt, t);
     const chest = st === 'playing' ? p.pos.clone().add(new THREE.Vector3(0, 1, 0)) : null;

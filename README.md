@@ -36,15 +36,18 @@ Touch a bubble to pop it. The counter is at the top left.
 
 - **Main menu:** a glossy logo, aero glass buttons, a clock and weather
   gadget, a swoosh, and Aero waving at you from the boardwalk. The 3D
-  scene keeps moving behind the menu, and you get synthesised music once
-  you click or press a key.
+  scene keeps moving behind the menu, and the music starts once you click
+  or press a key.
 - **Options:** High or Low graphics, music and effect volume, mouse
   sensitivity, invert look, FPS counter. Settings are saved in the browser.
 - **Credits** and **Quit** windows, and a pause menu while you play.
 - **The city:** about 100 city blocks around a central lake park. It has
-  slim silver and blue glass skyscrapers with sliced, angled tops and
-  spires, a TV tower, tree-lined streets with lamps and crosswalks, and small pocket
+  realistic high-rises (white and grey concrete towers with window grids,
+  blue and dark glass towers, lobbies, setbacks and rooftop crowns), a TV
+  tower, tree-lined streets with lamps and crosswalks, and small pocket
   parks with fountains.
+- **The countryside:** wind turbines on the hills and around the city, and
+  sunflower patches and fields.
 - **The park:** rolling hills, walks lined with hedges and rope fences, a
   promenade around the lake, reeds, rocks, benches, and a fountain in the
   lake.
@@ -54,7 +57,7 @@ Touch a bubble to pop it. The counter is at the top left.
 
 | | |
 | --- | --- |
-| ![Skyline from the hill path](screenshots/02-skyline.jpg) | ![Aero](screenshots/03-aero.jpg) |
+| ![Downtown](screenshots/02-downtown.jpg) | ![Sunflowers and a wind turbine](screenshots/03-meadow.jpg) |
 
 ## The character
 
@@ -96,7 +99,8 @@ npm run serve    # rebuild on change and serve on http://localhost:8080
 | `src/character.js` | Aero, its animation, optional glTF model |
 | `src/player.js` | movement, collisions, third-person camera |
 | `src/ui.js`, `src/style.css` | menus, windows and HUD |
-| `src/audio.js` | music and sound effects (Web Audio) |
+| `src/windmills.js` | wind turbines |
+| `src/audio.js` | music (`assets/music.mp3`) and sound effects |
 
 ## Credits
 

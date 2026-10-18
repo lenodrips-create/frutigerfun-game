@@ -1,23 +1,20 @@
-// Synthesised sound: a soft major-7th pad with glassy bell arpeggios, and
-// bubbly UI blips. Nothing to download.
+// Music: the Frutiger Aero track in assets/music.mp3, looped.
+// Sound effects: bubbly blips synthesised with Web Audio.
 
-const CHORDS = [
-  [53, 57, 60, 64], // Fmaj7
-  [55, 59, 62, 64], // G6
-  [52, 55, 59, 62], // Em7
-  [57, 60, 64, 67], // Am7
-];
-const BELLS = [72, 74, 76, 79, 81, 84, 86, 88];
 const midi = (n) => 440 * 2 ** ((n - 69) / 12);
 
 export class AeroAudio {
   constructor(settings) {
     this.settings = settings;
     this.ctx = null;
-    this.bar = 0;
+    this.track = new Audio('assets/music.mp3');
+    this.track.loop = true;
+    this.track.preload = 'auto';
   }
 
   start() {
+    this.applyVolumes();
+    if (this.track.paused) this.track.play().catch(() => {});
     if (this.ctx) {
       if (this.ctx.state === 'suspended') this.ctx.resume();
       return;
@@ -37,14 +34,12 @@ export class AeroAudio {
     wet.gain.value = 0.55;
     verb.connect(wet).connect(this.master);
     this.music.connect(this.master);
-    this.music.connect(verb);
     this.sfx.connect(this.master);
     this.sfx.connect(verb);
-    this.nextBar = ctx.currentTime + 0.1;
-    this.timer = setInterval(() => this.schedule(), 200);
   }
 
   applyVolumes() {
+    this.track.volume = Math.min(1, 0.7 * this.settings.music);
     if (!this.ctx) return;
     this.music.gain.value = 0.22 * this.settings.music;
     this.sfx.gain.value = 0.4 * this.settings.sfx;
@@ -59,45 +54,6 @@ export class AeroAudio {
       for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2.6;
     }
     return buf;
-  }
-
-  schedule() {
-    const ctx = this.ctx;
-    while (this.nextBar < ctx.currentTime + 1) {
-      const chord = CHORDS[this.bar % CHORDS.length];
-      const t = this.nextBar, dur = 4;
-      for (const n of chord) this.pad(midi(n), t, dur + 1.5);
-      this.pad(midi(chord[0] - 12), t, dur + 1.5, 0.6);
-      for (let i = 0; i < 8; i++) {
-        if (Math.random() < 0.45) continue;
-        const note = BELLS[Math.floor(Math.random() * BELLS.length)];
-        this.bell(midi(note), t + i * 0.5 + (Math.random() < 0.3 ? 0.25 : 0), 0.05 + Math.random() * 0.04);
-      }
-      this.nextBar += dur;
-      this.bar++;
-    }
-  }
-
-  pad(freq, t, dur, level = 1) {
-    const ctx = this.ctx;
-    const g = ctx.createGain();
-    const f = ctx.createBiquadFilter();
-    f.type = 'lowpass';
-    f.frequency.value = 1400;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.06 * level, t + 1.4);
-    g.gain.setValueAtTime(0.06 * level, t + dur - 2);
-    g.gain.linearRampToValueAtTime(0, t + dur);
-    for (const [type, detune] of [['sine', 0], ['triangle', 7], ['triangle', -7]]) {
-      const o = ctx.createOscillator();
-      o.type = type;
-      o.frequency.value = freq;
-      o.detune.value = detune;
-      o.connect(f);
-      o.start(t);
-      o.stop(t + dur + 0.1);
-    }
-    f.connect(g).connect(this.music);
   }
 
   bell(freq, t, level, out = this.music) {

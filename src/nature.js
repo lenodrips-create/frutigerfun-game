@@ -130,6 +130,34 @@ function makeTuftGeometry() {
   return b.build();
 }
 
+// Sunflower: stem, two leaves, and a head of yellow petals round a brown
+// centre, facing +z.
+function makeSunflowerGeometry() {
+  const b = new GeoBuilder();
+  const green = new THREE.Color(0x3f7f22), yellow = new THREE.Color(0xffc81a), gold = new THREE.Color(0xf2a20c), brown = new THREE.Color(0x4a2c12);
+  addTube(b, [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.03, 0.8, 0), new THREE.Vector3(0, 1.55, 0.06)], [0.035, 0.03, 0.025], 6, green);
+  for (const [y, s] of [[0.55, 1], [0.95, -1]]) {
+    const L = [[0, y, 0], [s * 0.22, y + 0.08, 0.1], [s * 0.4, y + 0.02, 0], [s * 0.22, y - 0.03, -0.08]];
+    const ids = L.map(([x, yy, z]) => b.vert(x, yy, z, 0, 1, 0, 0, 0, green));
+    b.quad(ids[0], ids[1], ids[2], ids[3]);
+  }
+  const cy = 1.6, cz = 0.1;
+  const center = b.vert(0, cy, cz + 0.03, 0, 0.2, 1, 0, 0, brown);
+  const ring = [];
+  for (let i = 0; i < 20; i++) {
+    const a = (i / 20) * Math.PI * 2;
+    ring.push(b.vert(Math.cos(a) * 0.14, cy + Math.sin(a) * 0.14, cz, 0, 0.2, 1, 0, 0, brown));
+  }
+  for (let i = 0; i < 20; i++) b.tri(center, ring[i], ring[(i + 1) % 20]);
+  for (let i = 0; i < 18; i++) {
+    const a = (i / 18) * Math.PI * 2, a1 = a - 0.14, a2 = a + 0.14;
+    const P = (r, ang, dz) => b.vert(Math.cos(ang) * r, cy + Math.sin(ang) * r, cz + dz, 0, 0.2, 1, 0, 0, i % 2 ? yellow : gold);
+    const ids = [P(0.12, a1, 0), P(0.12, a2, 0), P(0.3, a + 0.05, -0.04), P(0.3, a - 0.05, -0.04)];
+    b.quad(ids[0], ids[1], ids[2], ids[3]);
+  }
+  return b.build();
+}
+
 function makeRockGeometry() {
   const g = new THREE.IcosahedronGeometry(1, 1);
   const pos = g.attributes.position;
@@ -154,6 +182,7 @@ export class Foliage {
       flower: new THREE.MeshStandardMaterial({ map: bushTexture(41, true), roughness: 0.8, vertexColors: true }),
       grass: windy(new THREE.MeshStandardMaterial({ map: grassBladeTexture(), alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.9, vertexColors: true }), 0.1, this.uniforms),
       rock: new THREE.MeshStandardMaterial({ color: 0xd2cfc8, roughness: 0.92, flatShading: true }),
+      sunflower: windy(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, side: THREE.DoubleSide }), 0.03, this.uniforms),
     };
     this.variants = [
       makeTreeVariant(101, { height: 13, crown: 5.6, clusters: 9, cards: 14 }),
@@ -165,7 +194,8 @@ export class Foliage {
     this.bushGeo = makeBushGeometry(7, 4);
     this.tuftGeo = makeTuftGeometry();
     this.rockGeo = makeRockGeometry();
-    this.lists = { tree: this.variants.map(() => []), bush: [], flower: [], grass: [], rock: [] };
+    this.sunflowerGeo = makeSunflowerGeometry();
+    this.lists = { tree: this.variants.map(() => []), bush: [], flower: [], grass: [], rock: [], sunflower: [] };
   }
 
   addTree(x, y, z, s, variant, rot, tint) {
@@ -177,6 +207,9 @@ export class Foliage {
   }
   addTuft(x, y, z, s, rot, sy = s) {
     this.lists.grass.push({ x, y, z, s, sy, rot });
+  }
+  addSunflower(x, y, z, s, rot) {
+    this.lists.sunflower.push({ x, y, z, s, rot });
   }
   addRock(x, y, z, s, rot) {
     this.lists.rock.push({ x, y, z, s, rot });
@@ -218,6 +251,7 @@ export class Foliage {
     this.#instanced(scene, this.bushGeo, this.mats.flower, this.lists.flower, { colors: true });
     this.#instanced(scene, this.tuftGeo, this.mats.grass, this.lists.grass, { shadow: false });
     this.#instanced(scene, this.rockGeo, this.mats.rock, this.lists.rock);
+    this.#instanced(scene, this.sunflowerGeo, this.mats.sunflower, this.lists.sunflower, { shadow: false });
   }
 
   update(t) {
@@ -226,5 +260,5 @@ export class Foliage {
 }
 
 export function leafTint(rnd) {
-  return new THREE.Color(1.06, 1.08, 0.8).lerp(new THREE.Color(0.78, 0.94, 0.78), rnd());
+  return new THREE.Color(0.86, 0.92, 0.7).lerp(new THREE.Color(0.62, 0.78, 0.6), rnd());
 }

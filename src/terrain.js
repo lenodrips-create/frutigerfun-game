@@ -25,7 +25,7 @@ function paintPark(aoSpots) {
   base.width = base.height = B;
   const bg = base.getContext('2d');
   const img = bg.createImageData(B, B);
-  const lime = [124, 206, 52], deep = [72, 164, 46], mud = [150, 162, 104], bed = [52, 112, 98], walk = [222, 220, 212];
+  const lime = [122, 176, 66], deep = [68, 128, 46], mud = [150, 162, 104], bed = [52, 112, 98], walk = [222, 220, 212];
   for (let py = 0; py < B; py++) {
     for (let px = 0; px < B; px++) {
       const x = -PARK + ((px + 0.5) / B) * 2 * PARK;
@@ -111,7 +111,7 @@ export function buildTerrain(scene, aoSpots) {
   for (let i = 0; i < pos.count; i++) pos.setY(i, terrainHeight(pos.getX(i), pos.getZ(i)));
   geo.computeVertexNormals();
   const splat = toTexture(paintPark(aoSpots), { repeat: false });
-  const parkMat = withDetail(new THREE.MeshStandardMaterial({ map: splat, roughness: 0.95 }), detail, 110, 0.6);
+  const parkMat = withDetail(new THREE.MeshStandardMaterial({ map: splat, roughness: 0.95 }), detail, 160, 0.8);
   const park = new THREE.Mesh(geo, parkMat);
   park.receiveShadow = true;
   scene.add(park);
@@ -138,7 +138,7 @@ export function buildTerrain(scene, aoSpots) {
   gc.width = gc.height = 256;
   const gg = gc.getContext('2d');
   const rnd = mulberry32(3);
-  gg.fillStyle = '#6cbf3a';
+  gg.fillStyle = '#6fa944';
   gg.fillRect(0, 0, 256, 256);
   for (let i = 0; i < 400; i++) {
     gg.fillStyle = `rgba(${rnd() < 0.5 ? '150,215,80' : '60,140,40'},${0.15 + rnd() * 0.2})`;

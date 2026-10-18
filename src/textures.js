@@ -21,43 +21,93 @@ export function toTexture(c, { repeat = true, color = true } = {}) {
 
 const hsl = (h, s, l, a = 1) => `hsla(${h},${s}%,${l}%,${a})`;
 
-// Curtain-wall glass: tall silver-blue panels with bright mullions and only
-// faint floor lines, so towers read as smooth vertical glass.
-export function glassTexture(seed = 1) {
-  const S = 512, COLS = 8, W = S / COLS;
+// Building facades. One tile is 8 window bays by 4 floors (12 m x 14 m).
+//   'apartment'  white concrete with punched windows and balcony slabs
+//   'glass'      blue curtain wall
+//   'office'     light grey stone with tall windows
+//   'dark'       dark green-grey curtain wall
+export function facadeTexture(kind, seed = 1) {
+  const S = 512, CW = 64, CH = 128;
   const c = makeCanvas(S), g = c.getContext('2d');
   const rnd = mulberry32(seed);
-  for (let col = 0; col < COLS; col++) {
-    const x = col * W;
-    const k = 0.96 + rnd() * 0.06;
-    const grad = g.createLinearGradient(x, 0, x + W, 0);
-    grad.addColorStop(0, `rgb(${150 * k},${205 * k},${245})`);
-    grad.addColorStop(0.5, `rgb(${185 * k},${228 * k},${255})`);
-    grad.addColorStop(1, `rgb(${120 * k},${180 * k},${235 * k})`);
+  // gradient stops must be css colours
+  const rgb = (a) => `rgb(${a.map((v) => Math.round(Math.min(255, v))).join(',')})`;
+  const glassPane = (x, y, w, h, top, bottom) => {
+    const k = 0.82 + rnd() * 0.32;
+    const grad = g.createLinearGradient(x, y, x + w * 0.5, y + h);
+    grad.addColorStop(0, rgb(top.map((v) => v * k)));
+    grad.addColorStop(1, rgb(bottom.map((v) => v * k)));
     g.fillStyle = grad;
-    g.fillRect(x, 0, W, S);
-  }
-  // long soft sky reflections running down the glass
-  for (let i = 0; i < 5; i++) {
-    const x = rnd() * S, w = 30 + rnd() * 90;
-    const grad = g.createLinearGradient(x, 0, x + w, 0);
-    grad.addColorStop(0, 'rgba(255,255,255,0)');
-    grad.addColorStop(0.5, `rgba(255,255,255,${0.25 + rnd() * 0.3})`);
-    grad.addColorStop(1, 'rgba(255,255,255,0)');
-    g.fillStyle = grad;
-    g.fillRect(x, 0, w, S);
-  }
-  // faint floor lines
-  for (let row = 0; row < 4; row++) {
-    g.fillStyle = 'rgba(40,90,150,0.18)';
-    g.fillRect(0, row * 128 + 124, S, 4);
-  }
-  // mullions
-  for (let col = 0; col < COLS; col++) {
-    g.fillStyle = 'rgba(245,250,255,0.95)';
-    g.fillRect(col * W, 0, 3, S);
-    g.fillStyle = 'rgba(40,90,150,0.15)';
-    g.fillRect(col * W + 3, 0, 1, S);
+    g.fillRect(x, y, w, h);
+    if (rnd() < 0.25) {
+      g.fillStyle = 'rgba(255,255,255,0.12)';
+      g.fillRect(x, y, w, h);
+    }
+  };
+  if (kind === 'apartment') {
+    g.fillStyle = '#e9ebec';
+    g.fillRect(0, 0, S, S);
+    for (let r = 0; r < 4; r++) {
+      for (let col = 0; col < 8; col++) {
+        const x = col * CW, y = r * CH;
+        glassPane(x + 8, y + 22, CW - 16, 70, [150, 175, 195], [70, 92, 115]);
+        g.fillStyle = 'rgba(255,255,255,0.8)';
+        g.fillRect(x + CW / 2 - 1, y + 22, 2, 70);
+        if (rnd() < 0.3) {
+          g.fillStyle = `rgba(240,235,222,${0.5 + rnd() * 0.4})`;
+          g.fillRect(x + 9 + (rnd() < 0.5 ? 0 : 24), y + 24, 22, 66);
+        }
+      }
+      g.fillStyle = '#f7f8f8';
+      g.fillRect(0, r * CH + 96, S, 10);
+      g.fillStyle = 'rgba(90,100,110,0.45)';
+      g.fillRect(0, r * CH + 106, S, 4);
+      g.fillStyle = 'rgba(120,130,140,0.35)';
+      g.fillRect(0, r * CH + 100, S, 1);
+    }
+    for (let col = 0; col < 8; col += 2) {
+      g.fillStyle = 'rgba(160,165,170,0.25)';
+      g.fillRect(col * CW, 0, 2, S);
+    }
+  } else if (kind === 'office') {
+    g.fillStyle = '#d9d6cf';
+    g.fillRect(0, 0, S, S);
+    for (let r = 0; r < 4; r++) {
+      for (let col = 0; col < 8; col++) {
+        const x = col * CW, y = r * CH;
+        glassPane(x + 10, y + 14, CW - 20, CH - 34, [120, 150, 170], [45, 65, 85]);
+      }
+    }
+    for (let i = 0; i < 1500; i++) {
+      g.fillStyle = `rgba(110,100,90,${rnd() * 0.06})`;
+      g.fillRect(rnd() * S, rnd() * S, 2, 2);
+    }
+  } else {
+    const dark = kind === 'dark';
+    const top = dark ? [95, 120, 120] : [150, 200, 235];
+    const bottom = dark ? [35, 50, 55] : [45, 100, 160];
+    for (let r = 0; r < 4; r++) {
+      for (let col = 0; col < 8; col++) glassPane(col * CW, r * CH, CW, CH, top, bottom);
+    }
+    // big soft reflections across several panes
+    for (let i = 0; i < 3; i++) {
+      const x = rnd() * S, w = 60 + rnd() * 140;
+      const grad = g.createLinearGradient(x, 0, x + w, 0);
+      grad.addColorStop(0, 'rgba(255,255,255,0)');
+      grad.addColorStop(0.5, `rgba(230,245,255,${0.12 + rnd() * 0.15})`);
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = grad;
+      g.fillRect(x, 0, w, S);
+    }
+    const m = dark ? 'rgba(150,160,160,0.9)' : 'rgba(205,215,225,0.95)';
+    g.fillStyle = m;
+    for (let col = 0; col < 8; col++) g.fillRect(col * CW, 0, 3, S);
+    for (let r = 0; r < 4; r++) {
+      g.fillRect(0, r * CH, S, 3);
+      g.fillStyle = dark ? 'rgba(40,50,55,0.85)' : 'rgba(70,105,140,0.8)';
+      g.fillRect(0, r * CH + CH - 22, S, 19);
+      g.fillStyle = m;
+    }
   }
   return toTexture(c);
 }
@@ -189,7 +239,7 @@ export function leafTexture(seed = 23) {
     const x = S / 2 + Math.cos(a) * r, y = S / 2 + Math.sin(a) * r;
     const depth = r / 225;
     drawLeaf(g, x, y, 26 + rnd() * 20, 8 + rnd() * 6, rnd() * Math.PI * 2,
-      82 + rnd() * 30, 62 + rnd() * 20, 30 + rnd() * 26 + depth * 12);
+      86 + rnd() * 26, 42 + rnd() * 20, 26 + rnd() * 22 + depth * 10);
   }
   return toTexture(c, { repeat: false });
 }
@@ -199,11 +249,11 @@ export function bushTexture(seed = 29, flowers = false) {
   const S = 256;
   const c = makeCanvas(S), g = c.getContext('2d');
   const rnd = mulberry32(seed);
-  g.fillStyle = flowers ? '#3d7a2a' : '#3f8a24';
+  g.fillStyle = flowers ? '#3d6e2a' : '#3a6e26';
   g.fillRect(0, 0, S, S);
   for (let i = 0; i < 1400; i++) {
     drawLeaf(g, rnd() * S, rnd() * S, 12 + rnd() * 10, 4 + rnd() * 3, rnd() * Math.PI * 2,
-      88 + rnd() * 26, 60 + rnd() * 20, 28 + rnd() * 30);
+      90 + rnd() * 24, 40 + rnd() * 20, 24 + rnd() * 24);
   }
   if (flowers) {
     for (let i = 0; i < 420; i++) {

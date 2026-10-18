@@ -5,7 +5,7 @@ import { clamp, lerp } from './util.js';
 // Third-person controls: WASD / arrows to move, Shift to run, Space to jump,
 // mouse to look (click to capture the pointer), wheel to zoom.
 
-const WALK = 4.4, RUN = 9.5, JUMP = 6.4, GRAVITY = 19, RADIUS = 0.36;
+const WALK = 6.6, RUN = 14.25, JUMP = 6.4, GRAVITY = 19, RADIUS = 0.36;
 const DEFLECT = [0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2];
 
 export class Input {

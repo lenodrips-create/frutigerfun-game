@@ -32,10 +32,32 @@ function nearBridge(x, z, pad) {
   return false;
 }
 
-export function populatePark({ foliage, colliders, props }) {
+const SUN_YAW = Math.atan2(-0.5, 0.56);
+
+// Sunflower patches in the meadows and wind turbines on the hills.
+const SUNFLOWER_PATCHES = [[-58, 128, 16], [44, 122, 14], [-136, -58, 15], [128, 46, 13], [-30, -128, 12]];
+const TURBINES = [[-128, 84], [132, -96]];
+
+export function populatePark({ foliage, colliders, props, windmills }) {
   const rnd = mulberry32(777);
   const ao = [];
   const TAU = Math.PI * 2;
+  const reserved = [];
+  for (const [x, z] of TURBINES) {
+    windmills.add(x, terrainHeight(x, z) - 1, z, SUN_YAW + 0.4, 0.62);
+    colliders.addCircle(x, z, 1.4, 45);
+    reserved.push([x, z, 12]);
+  }
+  for (const [cx, cz, r] of SUNFLOWER_PATCHES) {
+    reserved.push([cx, cz, r + 3]);
+    for (let i = 0; i < r * r * 2.2; i++) {
+      const a = rnd() * TAU, d = Math.sqrt(rnd()) * r;
+      const x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d * 0.7;
+      if (lakeDist(x, z) < 6 || pathDist(x, z) < 1) continue;
+      foliage.addSunflower(x, terrainHeight(x, z) - 0.05, z, 0.8 + rnd() * 0.45, SUN_YAW + (rnd() - 0.5) * 0.8);
+    }
+  }
+  const free = (x, z) => reserved.every(([rx, rz, rr]) => Math.hypot(x - rx, z - rz) > rr);
   const tree = (x, z, s, v) => {
     const y = terrainHeight(x, z) - 0.15;
     const tv = foliage.addTree(x, y, z, s, v, rnd() * TAU, leafTint(rnd));
@@ -45,7 +67,7 @@ export function populatePark({ foliage, colliders, props }) {
   };
   const clearOf = (x, z, pathPad, lakePad = 5) =>
     lakeDist(x, z) > lakePad && pathDist(x, z) > pathPad && !nearBridge(x, z, 6) &&
-    Math.hypot(x - HERO_TREE.x, z - HERO_TREE.z) > 12;
+    Math.hypot(x - HERO_TREE.x, z - HERO_TREE.z) > 12 && free(x, z);
 
   // the big tree that frames the menu shot
   tree(HERO_TREE.x, HERO_TREE.z, 1.15, 4);
@@ -158,9 +180,9 @@ export function populatePark({ foliage, colliders, props }) {
     foliage.addTuft(x, Math.max(terrainHeight(x, z), -0.6) - 0.05, z, s * 1.1, rnd() * TAU, s * (1 + rnd() * 0.5));
   }
   // wild grass in the meadows
-  for (let i = 0; i < 2600; i++) {
+  for (let i = 0; i < 9000; i++) {
     const x = (rnd() * 2 - 1) * (PARK - 6), z = (rnd() * 2 - 1) * (PARK - 6);
-    if (fbm(x * 0.03, z * 0.03, 2) < 0.12 || lakeDist(x, z) < 4 || pathDist(x, z) < 0.6) continue;
+    if (fbm(x * 0.03, z * 0.03, 2) < -0.25 || lakeDist(x, z) < 4 || pathDist(x, z) < 0.6) continue;
     const s = 0.55 + rnd() * 0.45;
     foliage.addTuft(x, terrainHeight(x, z) - 0.05, z, s, rnd() * TAU);
   }
@@ -182,4 +204,28 @@ export function populatePark({ foliage, colliders, props }) {
   }
 
   return ao;
+}
+
+// Farmland beyond the city: sunflower fields and a ring of wind turbines.
+export function populateCountryside({ foliage, windmills }) {
+  const rnd = mulberry32(31337);
+  const TAU = Math.PI * 2;
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * TAU + rnd() * 0.25;
+    const r = 470 + rnd() * 230;
+    windmills.add(Math.cos(a) * r, -2, Math.sin(a) * r, SUN_YAW + 0.4, 0.9 + rnd() * 0.25);
+  }
+  for (let f = 0; f < 7; f++) {
+    const a = rnd() * TAU, r = 430 + rnd() * 120;
+    const cx = Math.cos(a) * r, cz = Math.sin(a) * r;
+    const w = 40 + rnd() * 30, d = 26 + rnd() * 16, rot = rnd() * Math.PI;
+    for (let u = -w / 2; u < w / 2; u += 1.1) {
+      for (let v = -d / 2; v < d / 2; v += 1.6) {
+        const x = cx + u * Math.cos(rot) - v * Math.sin(rot) + (rnd() - 0.5) * 0.5;
+        const z = cz + u * Math.sin(rot) + v * Math.cos(rot) + (rnd() - 0.5) * 0.5;
+        if (Math.max(Math.abs(x), Math.abs(z)) < 402) continue;
+        foliage.addSunflower(x, -0.05, z, 0.85 + rnd() * 0.35, SUN_YAW + (rnd() - 0.5) * 0.6);
+      }
+    }
+  }
 }
