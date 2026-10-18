@@ -67,8 +67,19 @@ export class Player {
     this.onJump = null;
   }
 
+  // Outdoors the map decides the ground; inside the apartment, `world` does.
+  groundAt(x, z) {
+    return this.world ? this.world.floorY : walkHeight(x, z);
+  }
+  blockedAt(x, z) {
+    return this.world ? !this.world.inside(x, z, RADIUS) : isDeepWater(x, z);
+  }
+  get cols() {
+    return this.world ? this.world.colliders : this.colliders;
+  }
+
   place(x, z, facing) {
-    this.pos.set(x, walkHeight(x, z), z);
+    this.pos.set(x, this.groundAt(x, z), z);
     this.vel.set(0, 0, 0);
     this.facing = facing;
     this.camYaw = facing + Math.PI;
@@ -111,7 +122,7 @@ export class Player {
     let mx = fx * iz + rx * ix, mz = fz * iz + rz * ix;
     const ml = Math.hypot(mx, mz);
     const running = active && this.input.down('ShiftLeft', 'ShiftRight');
-    const speed = running ? RUN : WALK;
+    const speed = (running ? RUN : WALK) * (this.world?.speedScale ?? 1);
     if (ml > 0) { mx /= ml; mz /= ml; }
     const accel = this.grounded ? 14 : 4;
     const kk = 1 - Math.exp(-accel * dt);
@@ -129,7 +140,7 @@ export class Player {
     // turning a little so we slide along the edge instead of sticking
     const p = this.pos;
     const ox = p.x, oz = p.z;
-    const ok = (x, z) => !isDeepWater(x, z) && !(this.grounded && walkHeight(x, z) - p.y > 0.6);
+    const ok = (x, z) => !this.blockedAt(x, z) && !(this.grounded && this.groundAt(x, z) - p.y > 0.6);
     const dx = this.vel.x * dt, dz = this.vel.z * dt;
     if (dx * dx + dz * dz > 1e-10) {
       let moved = false;
@@ -146,13 +157,13 @@ export class Player {
       }
       if (!moved) this.vel.x = this.vel.z = 0;
     }
-    this.colliders.resolve(p, RADIUS);
-    if (isDeepWater(p.x, p.z)) {
+    this.cols.resolve(p, RADIUS);
+    if (this.blockedAt(p.x, p.z)) {
       p.x = ox;
       p.z = oz;
     }
 
-    const ground = walkHeight(p.x, p.z);
+    const ground = this.groundAt(p.x, p.z);
     p.y += this.vel.y * dt;
     if (p.y <= ground || (this.grounded && p.y - ground < 0.35 && this.vel.y <= 0)) {
       p.y = ground;
@@ -187,10 +198,11 @@ export class Player {
     let free = len;
     for (let d = 0.6; d <= len; d += 0.4) {
       const x = this.target.x + dir.x * d, y = this.target.y + dir.y * d, z = this.target.z + dir.z * d;
-      if (this.colliders.solidAt(x, y, z, 0.35)) { free = Math.max(0.8, d - 0.5); break; }
+      const wall = this.world && (!this.world.inside(x, z, 0.25) || y > this.world.ceiling - 0.3);
+      if (wall || this.cols.solidAt(x, y, z, 0.35)) { free = Math.max(0.8, d - 0.5); break; }
     }
     want.copy(this.target).addScaledVector(dir, free);
-    const floor = walkHeight(want.x, want.z) + 0.4;
+    const floor = this.groundAt(want.x, want.z) + 0.4;
     if (want.y < floor) {
       if (dir.y < -0.05) {
         // keep the same view angle, just come closer

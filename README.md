@@ -48,6 +48,14 @@ Touch a bubble to pop it. The counter is at the top left.
   parks with fountains.
 - **The countryside:** wind turbines on the hills and around the city, and
   sunflower patches and fields.
+- **The apartment:** walk north out of the park to the white tower with the
+  glowing blue circle and the "Apartment" sign, and step into the circle.
+  Inside is a white-and-blue living room: a round window onto the skyline,
+  a curved translucent blue sofa round an oval table, glowing shelves,
+  hanging bubble chairs, glass pendant lights, and a clear desk with a
+  Bondi Blue all-in-one computer. The blue circle by the door takes you
+  back outside.
+- **Cursors:** pixel-art arrow and pointing-hand cursors in the menus.
 - **Grass:** real grass blades that sway in the wind cover the lawns and
   fields around you.
 - **The park:** rolling hills, walks lined with hedges and rope fences, a
@@ -60,6 +68,8 @@ Touch a bubble to pop it. The counter is at the top left.
 | | |
 | --- | --- |
 | ![Downtown](screenshots/02-downtown.jpg) | ![Sunflowers and a wind turbine](screenshots/03-meadow.jpg) |
+| ![The apartment](screenshots/04-apartment.jpg) | ![The computer desk](screenshots/05-imac.jpg) |
+| ![The apartment entrance](screenshots/06-entrance.jpg) | |
 
 ## The character
 
@@ -103,6 +113,8 @@ npm run serve    # rebuild on change and serve on http://localhost:8080
 | `src/player.js` | movement, collisions, third-person camera |
 | `src/ui.js`, `src/style.css` | menus, windows and HUD |
 | `src/windmills.js` | wind turbines |
+| `src/apartment.js` | the apartment interior, its furniture and the blue entrance circles |
+| `src/cursors.css` | the pixel-art cursors |
 | `src/audio.js` | music (`assets/music.mp3`) and sound effects |
 
 ## Credits

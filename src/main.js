@@ -10,7 +10,8 @@ import { Props } from './props.js';
 import { populatePark, populateCountryside, MENU } from './park.js';
 import { Windmills } from './windmills.js';
 import { Grass } from './grass.js';
-import { buildCity } from './city.js';
+import { buildCity, APARTMENT_DOOR } from './city.js';
+import { Apartment, makePortal } from './apartment.js';
 import { buildTerrain } from './terrain.js';
 import { Sky, LensFlare, SKY_COLORS, makeSkyMaterial } from './sky.js';
 import { Lake } from './water.js';
@@ -20,7 +21,7 @@ import { Player, Input } from './player.js';
 import { AeroAudio } from './audio.js';
 import { UI } from './ui.js';
 import { clamp } from './util.js';
-import { bridge } from './layout.js';
+import { bridge, SLAB_H } from './layout.js';
 
 const SETTINGS_KEY = 'frutiger-fun-settings';
 const DEFAULTS = { quality: 'high', music: 0.6, sfx: 0.8, sensitivity: 1, invertY: false, showFps: false };
@@ -142,6 +143,13 @@ class Game {
     this.bubbles = new Bubbles(this.scene, this.sunDir, 70);
     this.character = new Character();
     this.scene.add(this.character.root);
+    this.apartment = new Apartment();
+    this.door = new THREE.Vector3(APARTMENT_DOOR.x, SLAB_H, APARTMENT_DOOR.z);
+    this.doorPortal = makePortal();
+    this.doorPortal.position.copy(this.door);
+    this.scene.add(this.doorPortal);
+    this.inside = false;
+    this.portalArmed = true;
     await this.character.tryLoadModel('assets/character.glb');
     this.input = new Input(this.canvas);
     this.player = new Player(this.character, this.camera, this.colliders, this.input, this.settings);
@@ -149,6 +157,7 @@ class Game {
     this.flare = new LensFlare(document.getElementById('flare'), this.colliders);
     await step(0.88, 'Polishing the glass…');
     this.buildEnvironment();
+    this.apartment.prepare(this.renderer);
     this.setupComposer();
     this.applyQuality();
     this.enterMenu(true);
@@ -172,7 +181,8 @@ class Game {
   setupComposer() {
     const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: 4 });
     this.composer = new EffectComposer(this.renderer, rt);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.renderPass = new RenderPass(this.scene, this.camera);
+    this.composer.addPass(this.renderPass);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.24, 0.55, 1.05);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new ShaderPass(GradeShader));
@@ -223,7 +233,61 @@ class Game {
     outLook.y += 8.5;
   }
 
+  // Step through the blue circle: swap the whole world for the apartment.
+  enterApartment() {
+    this.switching = true;
+    this.audio.whoosh();
+    this.ui.fade(true);
+    setTimeout(() => {
+      this.setInside(true);
+      const s = this.apartment.spawn;
+      this.player.place(s.x, s.z, s.facing);
+      this.player.camYaw = s.facing + Math.PI;
+      this.player.camDist = 3.4;
+      this.player.camPitch = 0.32;
+      this.player.updateCamera(0, true);
+      this.ui.fade(false);
+      this.switching = false;
+    }, 420);
+  }
+
+  leaveApartment() {
+    this.switching = true;
+    this.audio.whoosh();
+    this.ui.fade(true);
+    setTimeout(() => {
+      this.setInside(false);
+      this.player.place(this.door.x, this.door.z + 4.5, 0);
+      this.player.camYaw = Math.PI;
+      this.player.camDist = 6.5;
+      this.player.updateCamera(0, true);
+      this.ui.fade(false);
+      this.switching = false;
+    }, 420);
+  }
+
+  setInside(inside) {
+    this.inside = inside;
+    this.portalArmed = false;
+    const scene = inside ? this.apartment.scene : this.scene;
+    scene.add(this.character.root);
+    this.player.world = inside ? this.apartment : null;
+    this.renderPass.scene = scene;
+  }
+
+  checkPortals() {
+    const p = this.player.pos;
+    const target = this.inside ? this.apartment.exit : this.door;
+    const d = Math.hypot(p.x - target.x, p.z - target.z);
+    if (d > 1.8) this.portalArmed = true;
+    if (d < 0.9 && this.portalArmed && !this.switching) {
+      if (this.inside) this.leaveApartment();
+      else this.enterApartment();
+    }
+  }
+
   enterMenu(first = false) {
+    if (this.inside) this.setInside(false);
     this.state = 'menu';
     this.stateTime = 0;
     const { spot, f, right } = MENU;
@@ -339,6 +403,7 @@ class Game {
       this.focus.copy(p.pos);
     } else if (st === 'playing') {
       p.update(dt, true);
+      this.checkPortals();
       p.updateCamera(dt);
       this.focus.copy(p.pos);
     } else if (st === 'paused') {
@@ -353,7 +418,9 @@ class Game {
     this.grassFar.update(t, grassAt);
     this.sky.update(dt, this.camera);
     this.lake.update(dt, t);
-    const chest = st === 'playing' ? p.pos.clone().add(new THREE.Vector3(0, 1, 0)) : null;
+    this.doorPortal.userData.update(t);
+    if (this.inside) this.apartment.update(t);
+    const chest = st === 'playing' && !this.inside ? p.pos.clone().add(new THREE.Vector3(0, 1, 0)) : null;
     this.bubbles.update(st === 'paused' ? 0 : dt, t, st === 'menu' ? MENU.spot.clone().addScaledVector(MENU.f, 10) : this.focus, chest, () => {
       this.audio.pop();
       this.ui.setCount(this.bubbles.popped);
@@ -364,7 +431,7 @@ class Game {
     sun.target.position.copy(this.focus);
     sun.position.copy(this.focus).addScaledVector(this.sunDir, 250);
 
-    this.flare.update(dt, this.camera, this.sunDir, st !== 'loading');
+    this.flare.update(dt, this.camera, this.sunDir, st !== 'loading' && !this.inside);
 
     if (st === 'menu') {
       const head = this.character.root.position.clone().add(new THREE.Vector3(0, 2.05, 0)).project(this.camera);
@@ -375,7 +442,7 @@ class Game {
 
   render() {
     if (this.useComposer) this.composer.render();
-    else this.renderer.render(this.scene, this.camera);
+    else this.renderer.render(this.inside ? this.apartment.scene : this.scene, this.camera);
   }
 
   run() {

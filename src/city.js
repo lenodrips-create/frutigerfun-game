@@ -10,6 +10,10 @@ import { leafTint } from './nature.js';
 const hex = (h) => new THREE.Color(h);
 const C = (r, g, b) => new THREE.Color(r, g, b);
 const WHITE = C(1, 1, 1);
+// The tower with the apartment you can visit, and the blue circle in front.
+const APARTMENT_BLOCK = { x: 0, z: -210 };
+export const APARTMENT_DOOR = { x: 0, z: -195 };
+
 const FACADES = ['apartment', 'apartment', 'glass', 'glass', 'office', 'dark'];
 const ROOF = hex(0xd5dade);
 const TRIM_WHITE = hex(0xf4f8fb);
@@ -51,8 +55,9 @@ export function buildCity(scene, { foliage, colliders, props }) {
   // A high-rise like the ones in real skylines: a lobby of dark glass, a
   // windowed shaft (white concrete, blue glass, stone or dark glass), maybe
   // a setback, then a crown: a parapet frame, rooftop plant, or a spire.
-  function tower(x, z, w, d, h) {
-    const kind = pick(FACADES);
+  function tower(x, z, w, d, h, forceKind) {
+    const picked = pick(FACADES);
+    const kind = forceKind ?? picked;
     const b = B[kind];
     const shade = 0.92 + rnd() * 0.1;
     const tint = C(shade, shade, shade * (kind === 'apartment' ? 0.99 : 1.02));
@@ -152,6 +157,7 @@ export function buildCity(scene, { foliage, colliders, props }) {
           const x = along === 'x' ? cx + t : cx + sx * (BLOCK / 2 - 2.4);
           const z = along === 'x' ? cz + sz * (BLOCK / 2 - 2.4) : cz + t;
           const s = 0.85 + rnd() * 0.3;
+          if (Math.hypot(x - APARTMENT_DOOR.x, z - APARTMENT_DOOR.z) < 14) continue;
           const tv = foliage.addTree(x, SLAB_H, z, s, 3, rnd() * 6.28, leafTint(rnd));
           colliders.addCircle(x, z, tv.trunkR * s + 0.1, 4, false);
           colliders.addCanopy(x, SLAB_H + tv.canopyY * s, z, tv.canopyR * s * 0.8);
@@ -169,6 +175,10 @@ export function buildCity(scene, { foliage, colliders, props }) {
       if (cx === -70 && cz === -350) {
         pocketPark(cx, cz, false);
         tvTower(cx, cz);
+        continue;
+      }
+      if (cx === APARTMENT_BLOCK.x && cz === APARTMENT_BLOCK.z) {
+        tower(cx, cz - 4, 24, 24, 110, 'apartment');
         continue;
       }
       const r = rnd();
