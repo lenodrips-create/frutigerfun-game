@@ -48,6 +48,8 @@ Touch a bubble to pop it. The counter is at the top left.
   parks with fountains.
 - **The countryside:** wind turbines on the hills and around the city, and
   sunflower patches and fields.
+- **Grass:** real grass blades that sway in the wind cover the lawns and
+  fields around you.
 - **The park:** rolling hills, walks lined with hedges and rope fences, a
   promenade around the lake, reeds, rocks, benches, and a fountain in the
   lake.
@@ -91,7 +93,8 @@ npm run serve    # rebuild on change and serve on http://localhost:8080
 | `src/city.js` | blocks, towers, roads, street trees and lamps |
 | `src/park.js` | trees, hedges, fences, flowers and reeds in the park; the menu shot |
 | `src/terrain.js` | the painted park ground, roads, distant hills |
-| `src/nature.js` | instanced trees, bushes, grass and rocks |
+| `src/nature.js` | instanced trees, bushes, grass tufts, sunflowers and rocks |
+| `src/grass.js` | the field of swaying grass blades around the player |
 | `src/props.js` | lamps, benches, fences and the boardwalk |
 | `src/sky.js` | sky, clouds, lens flare |
 | `src/water.js` | lake reflection and fountain |
