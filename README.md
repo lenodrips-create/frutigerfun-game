@@ -9,11 +9,7 @@ working, and **Play** drops you into the city to wander around.
 
 ## Play it
 
-- **From disk:** download the repository and open `index.html` in Chrome,
-  Edge or Firefox. You don't need a server or an install.
-- **Online:** turn on GitHub Pages for this repository (Settings → Pages →
-  deploy from the `main` branch, root folder). The game is then at
-  `https://lenodrips-create.github.io/frutigerfun-game/`.
+launch the website https.etc.com
 
 It needs a browser with WebGL 2. Graphics can be set to **Low** in Options
 for slower computers.
@@ -80,30 +76,7 @@ Touch a bubble to pop it. The counter is at the top left.
 | ![Sitting at the computer](screenshots/08-computer.jpg) | ![The way to the apartment](screenshots/07-guide.jpg) |
 | ![The apartment entrance](screenshots/06-entrance.jpg) | |
 
-## The character
 
-The player character, **Aero**, is a glossy blue buddy in the style of the
-classic messenger icon: a round head on a bell-shaped body with little
-arms, bright cyan in the middle and dark blue at the edges. It waddles and
-hops when it walks and waves from the boardwalk on the menu.
-
-To use the real model, download it from Sketchfab as **glTF Binary
-(.glb)** and save it as `assets/character.glb`. The game loads it
-automatically, scales it to player height and, if the model has idle,
-walk or run animations, plays them. The model only loads when the game is
-served over http(s), for example on GitHub Pages or with `npm run serve`.
-Browsers block it when you open the page straight from disk.
-
-## Working on it
-
-The source is in `src/`. `dist/` holds the built bundle that `index.html` loads, and it is
-committed so the game runs without a build step.
-
-```sh
-npm install
-npm run build    # rebuild dist/ once
-npm run serve    # rebuild on change and serve on http://localhost:8080
-```
 
 | File | What it does |
 | --- | --- |
