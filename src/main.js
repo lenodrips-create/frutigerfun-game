@@ -228,8 +228,9 @@ class Game {
     this.stateTime = 0;
     const { spot, f, right } = MENU;
     this.player.place(spot.x, spot.z, 0);
-    const cam = new THREE.Vector3(), look = new THREE.Vector3();
+    const cam = this.camera.position, look = (this.menuLookNow ??= new THREE.Vector3());
     this.menuCamera(0, cam, look);
+    this.camera.lookAt(look);
     const toCam = new THREE.Vector3(cam.x - spot.x, 0, cam.z - spot.z).normalize().addScaledVector(right, -0.35);
     this.player.facing = Math.atan2(toCam.x, toCam.z);
     this.player.syncCharacter();
