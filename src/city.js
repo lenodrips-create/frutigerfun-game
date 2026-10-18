@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { GeoBuilder, addPrism, addPyramid, addBox, addCylinder, rectPts, circlePts, roundedRectPts } from './geometry.js';
-import { glassTexture, apartmentTexture, officeTexture, paverTexture, grassDetailTexture } from './textures.js';
+import { GeoBuilder, addPrism, addBox, addCylinder, rectPts, circlePts, roundedRectPts, ellipsePts } from './geometry.js';
+import { glassTexture, paverTexture, grassDetailTexture } from './textures.js';
 import { blockCenters, isParkBlock, BLOCK, PITCH, PARK, CITY, SLAB_H } from './layout.js';
 import { mulberry32, clamp } from './util.js';
 import { leafTint } from './nature.js';
@@ -10,9 +10,8 @@ import { leafTint } from './nature.js';
 const hex = (h) => new THREE.Color(h);
 const C = (r, g, b) => new THREE.Color(r, g, b);
 const WHITE = C(1, 1, 1);
-const GLASS_TINTS = [C(0.86, 0.96, 1), C(0.7, 1, 0.96), C(0.66, 0.8, 1), C(0.95, 0.98, 1), C(0.78, 0.92, 1)];
+const GLASS_TINTS = [C(1, 1, 1), C(0.82, 0.92, 1), C(0.42, 0.62, 1), C(0.6, 0.78, 1), C(0.3, 0.5, 0.95), C(0.92, 0.97, 1)];
 const ROOF = hex(0xd5dade);
-const MAROON = hex(0x9a3d38);
 const TRIM_WHITE = hex(0xf4f8fb);
 
 function chamferPts(cx, cz, w, d, c) {
@@ -35,7 +34,7 @@ export function buildCity(scene, { foliage, colliders, props }) {
   const rnd = mulberry32(4242);
   const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
   const B = {
-    glass: new GeoBuilder(), office: new GeoBuilder(), apart: new GeoBuilder(),
+    glass: new GeoBuilder(),
     trim: new GeoBuilder(), roof: new GeoBuilder(), slab: new GeoBuilder(),
     lawn: new GeoBuilder(), marks: new GeoBuilder(), pool: new GeoBuilder(),
   };
@@ -49,49 +48,42 @@ export function buildCity(scene, { foliage, colliders, props }) {
     }
   };
 
-  function tower(x, z, w, d, h, kind = 'glass') {
-    const b = kind === 'glass' ? B.glass : B.office;
-    const tint = kind === 'glass' ? pick(GLASS_TINTS) : pick([WHITE, C(0.97, 0.99, 1), C(1, 0.98, 0.96)]);
-    const shape = pick(kind === 'glass' ? ['box', 'round', 'round', 'cyl', 'chamfer'] : ['box', 'box', 'round', 'chamfer']);
-    const opt = { tileW: kind === 'glass' ? 12 : 16, tileH: 16, uOff: rnd(), smooth: shape === 'round' || shape === 'cyl', roofBuilder: B.roof, roofColor: ROOF, yBase: SLAB_H };
-    let fw = w, fd = d;
-    if (h > 55 && rnd() < 0.55) {
-      const pw = Math.min(w + 8, 44), pd = Math.min(d + 8, 44);
-      addPrism(B.office, rectPts(x, z, pw, pd), SLAB_H, SLAB_H + 7 + rnd() * 5, WHITE, { tileW: 16, tileH: 16, roofBuilder: B.roof, roofColor: ROOF });
-      fw = pw; fd = pd;
-    }
-    const h1 = h * (0.7 + rnd() * 0.14);
-    addPrism(b, footprint(shape, x, z, w, d), SLAB_H, h1, tint, opt);
-    const s2 = 0.74 + rnd() * 0.12;
-    const h2 = h * 0.94;
-    addPrism(b, footprint(shape, x, z, w * s2, d * s2), h1, h2, tint, opt);
-    const crown = rnd();
-    if (crown < 0.3) {
-      addPyramid(B.trim, footprint(shape === 'cyl' ? 'cyl' : 'box', x, z, w * s2, d * s2), h2, 5 + rnd() * 7, TRIM_WHITE);
-    } else if (crown < 0.65) {
-      addPrism(B.trim, footprint(shape, x, z, w * s2 * 0.62, d * s2 * 0.62), h2, h, TRIM_WHITE, { roofBuilder: B.roof, roofColor: ROOF });
-      if (h > 90) addCylinder(B.trim, new THREE.Vector3(x, h, z), new THREE.Vector3(x, h + 18 + rnd() * 18, z), 0.55, 0.12, 8, TRIM_WHITE);
+  // A slim glass skyscraper: one smooth shaft, sometimes a setback, topped
+  // by a sliced (angled) roof, a spire or a crisp flat top.
+  function tower(x, z, w, d, h) {
+    const tint = pick(GLASS_TINTS);
+    const base = tint.clone().multiplyScalar(0.72);
+    const shape = pick(['box', 'round', 'round', 'lens', 'chamfer', 'cyl']);
+    const rot = rnd() * Math.PI;
+    const fp = (sw, sd) => shape === 'lens'
+      ? ellipsePts(x, z, sw / 2, sd / 2, 32, rot)
+      : footprint(shape, x, z, sw, sd);
+    const opt = {
+      tileW: 12, tileH: 16, uOff: rnd(), smooth: shape !== 'box' && shape !== 'chamfer',
+      roofBuilder: B.glass, roofColor: tint, yBase: SLAB_H, topColor: tint.clone().lerp(WHITE, 0.3), fadeTo: h,
+    };
+    const style = rnd();
+    // a sliced top rises across the roof in a random direction
+    const a = rnd() * Math.PI * 2, rise = (0.35 + rnd() * 0.5) * Math.min(1, 40 / Math.max(w, d));
+    const slope = [Math.cos(a) * rise, Math.sin(a) * rise];
+    const sliceH = rise * Math.max(w, d) * 0.5;
+    if (style < 0.45) {
+      addPrism(B.glass, fp(w, d), SLAB_H, h - sliceH, base, { ...opt, slope });
+    } else if (style < 0.75) {
+      const h1 = h * (0.62 + rnd() * 0.15);
+      addPrism(B.glass, fp(w, d), SLAB_H, h1, base, opt);
+      const s2 = 0.68 + rnd() * 0.14;
+      addPrism(B.glass, fp(w * s2, d * s2), h1, h - sliceH * s2, base, { ...opt, slope });
     } else {
-      for (let i = 0; i < 3; i++) {
-        addBox(B.roof, x + (rnd() - 0.5) * w * 0.4, h2 + 1.2, z + (rnd() - 0.5) * d * 0.4, 3 + rnd() * 4, 2.4, 3 + rnd() * 4, ROOF);
-      }
+      addPrism(B.glass, fp(w, d), SLAB_H, h, base, opt);
+      addPrism(B.trim, fp(w * 0.5, d * 0.5), h, h + 4, TRIM_WHITE, { roofBuilder: B.roof, roofColor: ROOF });
+      addCylinder(B.trim, new THREE.Vector3(x, h + 4, z), new THREE.Vector3(x, h + 22 + rnd() * 22, z), 0.6, 0.1, 8, TRIM_WHITE);
     }
-    if (shape === 'cyl' && fw === w) colliders.addCircle(x, z, Math.min(w, d) / 2, h);
-    else colliders.addBox(x - fw / 2, z - fd / 2, x + fw / 2, z + fd / 2, h);
-  }
-
-  function apartment(x, z, w, d, h) {
-    const opt = { tileW: 12, tileH: 12, uOff: rnd(), roofBuilder: B.roof, roofColor: ROOF, yBase: SLAB_H };
-    addPrism(B.apart, rectPts(x, z, w, d), SLAB_H, h, WHITE, opt);
-    // dark glass stair core up one side
-    addPrism(B.glass, rectPts(x + w / 2 + 0.9, z, 1.8, d * 0.34), SLAB_H, h + 6, C(0.55, 0.68, 0.85), { tileW: 12, tileH: 16, roofBuilder: B.roof, roofColor: ROOF });
-    // the crown: a white frame with maroon roofs
-    addPrism(B.apart, rectPts(x, z, w * 0.82, d * 0.62), h, h + 4.5, WHITE, { ...opt, yBase: h });
-    addPyramid(B.trim, rectPts(x - w * 0.18, z, w * 0.42, d * 0.62), h + 4.5, 5.5, MAROON);
-    addPyramid(B.trim, rectPts(x + w * 0.22, z, w * 0.3, d * 0.5), h + 4.5, 3.6, MAROON);
-    addBox(B.trim, x - w * 0.43, h + 3.5, z, 0.7, 7, d * 0.7, TRIM_WHITE);
-    addBox(B.trim, x + w * 0.43, h + 2.5, z, 0.7, 5, d * 0.7, TRIM_WHITE);
-    colliders.addBox(x - w / 2, z - d / 2, x + w / 2 + 1.8, z + d / 2, h + 6);
+    if (shape === 'cyl') colliders.addCircle(x, z, Math.min(w, d) / 2, h);
+    else if (shape === 'lens') {
+      const r = Math.max(w, d) / 2;
+      colliders.addBox(x - r * 0.75, z - r * 0.75, x + r * 0.75, z + r * 0.75, h);
+    } else colliders.addBox(x - w / 2, z - d / 2, x + w / 2, z + d / 2, h);
   }
 
   function tvTower(x, z) {
@@ -162,45 +154,35 @@ export function buildCity(scene, { foliage, colliders, props }) {
       }
 
       const north = clamp((-cz - 140) / 210, 0, 1);
-      const hm = 0.5 + 1.0 * north + rnd() * 0.35;
+      const hm = 0.55 + 0.55 * north + rnd() * 0.25;
       if (cx === -70 && cz === -350) {
         pocketPark(cx, cz, false);
         tvTower(cx, cz);
         continue;
       }
-      const nw = cx < -100 && cz < -100;
       const r = rnd();
-      if (nw && r < 0.75) {
-        const n = rnd() < 0.5 ? 2 : 3;
-        const spots = n === 2 ? [[-10, 8], [11, -9]] : [[-12, 11], [12, 10], [0, -12]];
-        for (const [ox, oz] of spots) apartment(cx + ox, cz + oz, 15, 17, 62 + rnd() * 45 * (0.6 + hm * 0.5));
-        lawn(cx + 14, cz - 14, 12, 10);
-        continue;
-      }
-      if (r < 0.13) {
+      if (r < 0.12) {
         pocketPark(cx, cz, rnd() < 0.7);
         continue;
       }
-      const kind = r < 0.68 ? 'glass' : 'office';
       const layout = rnd();
-      if (layout < 0.35) {
-        const w = 24 + rnd() * 10, d = 24 + rnd() * 10;
-        tower(cx, cz, w, d, (60 + rnd() * 80) * hm, kind);
-        lawn(cx, cz + 17, 30, 6);
-      } else if (layout < 0.7) {
+      if (layout < 0.3) {
+        tower(cx, cz, 20 + rnd() * 8, 20 + rnd() * 8, (85 + rnd() * 75) * hm);
+        lawn(cx, cz + 18, 30, 6);
+      } else if (layout < 0.65) {
         const vertical = rnd() < 0.5;
         for (const sgn of [-1, 1]) {
           const ox = vertical ? sgn * 11 : 0, oz = vertical ? 0 : sgn * 11;
-          const w = vertical ? 17 : 30, d = vertical ? 30 : 17;
-          tower(cx + ox, cz + oz, w, d, (40 + rnd() * 70) * hm, rnd() < 0.7 ? kind : 'office');
+          const w = vertical ? 16 : 24, d = vertical ? 24 : 16;
+          tower(cx + ox + (rnd() - 0.5) * 3, cz + oz + (rnd() - 0.5) * 3, w, d, (60 + rnd() * 70) * hm);
         }
       } else {
         for (const [ox, oz] of [[-11, -11], [11, -11], [-11, 11], [11, 11]]) {
-          if (rnd() < 0.2) {
+          if (rnd() < 0.22) {
             lawn(cx + ox, cz + oz, 16, 16);
             continue;
           }
-          tower(cx + ox, cz + oz, 15, 15, (30 + rnd() * 60) * hm, rnd() < 0.75 ? kind : 'glass');
+          tower(cx + ox, cz + oz, 13 + rnd() * 3, 13 + rnd() * 3, (40 + rnd() * 60) * hm);
         }
       }
     }
@@ -233,9 +215,7 @@ export function buildCity(scene, { foliage, colliders, props }) {
   }
 
   // ---- meshes ----
-  const glassMat = new THREE.MeshStandardMaterial({ map: glassTexture(5), vertexColors: true, metalness: 0.5, roughness: 0.07, envMapIntensity: 1.25 });
-  const officeMat = new THREE.MeshStandardMaterial({ map: officeTexture(6), vertexColors: true, metalness: 0.2, roughness: 0.28 });
-  const apartMat = new THREE.MeshStandardMaterial({ map: apartmentTexture(7), vertexColors: true, roughness: 0.6 });
+  const glassMat = new THREE.MeshStandardMaterial({ map: glassTexture(5), vertexColors: true, metalness: 0.2, roughness: 0.12, envMapIntensity: 0.9 });
   const trimMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.35, metalness: 0.1 });
   const roofMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.85 });
   const slabMat = new THREE.MeshStandardMaterial({ map: paverTexture(), roughness: 0.85 });
@@ -251,13 +231,11 @@ export function buildCity(scene, { foliage, colliders, props }) {
     scene.add(mesh);
   };
   add(B.glass, glassMat);
-  add(B.office, officeMat);
-  add(B.apart, apartMat);
   add(B.trim, trimMat);
   add(B.roof, roofMat);
   add(B.slab, slabMat, false);
   add(B.lawn, lawnMat, false);
   add(B.marks, markMat, false);
   add(B.pool, poolMat, false);
-  return { materials: { glassMat, officeMat, apartMat } };
+  return { materials: { glassMat } };
 }

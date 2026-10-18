@@ -6,8 +6,8 @@ import { mulberry32, clamp } from './util.js';
 // drawn over the canvas.
 
 export const SKY_COLORS = {
-  top: new THREE.Color(0x0b74de),
-  mid: new THREE.Color(0x2fb6f6),
+  top: new THREE.Color(0x2591f0),
+  mid: new THREE.Color(0x63cdff),
   horizon: new THREE.Color(0xdaf5ff),
   ground: new THREE.Color(0xcdeaf3),
 };
@@ -72,9 +72,9 @@ export class Sky {
       s.userData = { azimuth, dist, speed: 0.002 + rnd() * 0.003 };
       this.clouds.add(s);
     };
-    for (let i = 0; i < 30; i++) place(rnd() * Math.PI * 2, 700 + rnd() * 1200, 160 + rnd() * 420, 260 + rnd() * 420);
+    for (let i = 0; i < 44; i++) place(rnd() * Math.PI * 2, 700 + rnd() * 1200, 160 + rnd() * 380, 100 + rnd() * 150);
     // a bank of big cumulus low behind the skyline, like a postcard
-    for (let i = 0; i < 9; i++) place(-Math.PI / 2 + (rnd() - 0.5) * 1.6, 1200 + rnd() * 500, 70 + rnd() * 110, 520 + rnd() * 380);
+    for (let i = 0; i < 10; i++) place(-Math.PI / 2 + (rnd() - 0.5) * 1.6, 1200 + rnd() * 500, 70 + rnd() * 90, 190 + rnd() * 150);
     scene.add(this.clouds);
   }
 

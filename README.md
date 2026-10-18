@@ -42,8 +42,8 @@ Touch a bubble to pop it. The counter is at the top left.
   sensitivity, invert look, FPS counter. Settings are saved in the browser.
 - **Credits** and **Quit** windows, and a pause menu while you play.
 - **The city:** about 100 city blocks around a central lake park. It has
-  blue and teal glass towers, white apartment towers with red crowns, a TV
-  tower, tree-lined streets with lamps and crosswalks, and small pocket
+  slim silver and blue glass skyscrapers with sliced, angled tops and
+  spires, a TV tower, tree-lined streets with lamps and crosswalks, and small pocket
   parks with fountains.
 - **The park:** rolling hills, walks lined with hedges and rope fences, a
   promenade around the lake, reeds, rocks, benches, and a fountain in the
@@ -54,17 +54,14 @@ Touch a bubble to pop it. The counter is at the top left.
 
 | | |
 | --- | --- |
-| ![Boardwalk](screenshots/03-boardwalk.jpg) | ![Downtown](screenshots/04-downtown.jpg) |
-| ![Hill path](screenshots/05-hill-path.jpg) | ![Lake promenade](screenshots/06-lake.jpg) |
-| ![Lens flare](screenshots/07-lens-flare.jpg) | ![Aero](screenshots/08-aero.jpg) |
-| ![Options](screenshots/02-options.jpg) | |
+| ![Skyline from the hill path](screenshots/02-skyline.jpg) | ![Aero](screenshots/03-aero.jpg) |
 
 ## The character
 
-The player character, **Aero**, is built in code after the
-[Frutiger Aero Character V2](https://sketchfab.com/3d-models/frutiger-aero-character-v2-b58344c11a064f36bbc6992067e7f9e0)
-model on Sketchfab. Sketchfab couldn't be reached from the build machine,
-so the model itself isn't included.
+The player character, **Aero**, is a glossy blue buddy in the style of the
+classic messenger icon: a round head on a bell-shaped body with little
+arms, bright cyan in the middle and dark blue at the edges. It waddles and
+hops when it walks and waves from the boardwalk on the menu.
 
 To use the real model, download it from Sketchfab as **glTF Binary
 (.glb)** and save it as `assets/character.glb`. The game loads it

@@ -21,114 +21,43 @@ export function toTexture(c, { repeat = true, color = true } = {}) {
 
 const hsl = (h, s, l, a = 1) => `hsla(${h},${s}%,${l}%,${a})`;
 
-// Curtain-wall glass: 4 x 4 panels per tile, one floor per row.
+// Curtain-wall glass: tall silver-blue panels with bright mullions and only
+// faint floor lines, so towers read as smooth vertical glass.
 export function glassTexture(seed = 1) {
-  const S = 512, C = 128;
+  const S = 512, COLS = 8, W = S / COLS;
   const c = makeCanvas(S), g = c.getContext('2d');
   const rnd = mulberry32(seed);
-  for (let row = 0; row < 4; row++) {
-    for (let col = 0; col < 4; col++) {
-      const x = col * C, y = row * C;
-      const k = 0.9 + rnd() * 0.2;
-      const grad = g.createLinearGradient(x, y, x + C * 0.3, y + C);
-      grad.addColorStop(0, `rgb(${178 * k},${226 * k},${255})`);
-      grad.addColorStop(0.55, `rgb(${92 * k},${170 * k},${232 * k})`);
-      grad.addColorStop(1, `rgb(${52 * k},${118 * k},${196 * k})`);
-      g.fillStyle = grad;
-      g.fillRect(x, y, C, C);
-      // a soft diagonal reflection on some panes
-      if (rnd() < 0.6) {
-        g.save();
-        g.globalAlpha = 0.1 + rnd() * 0.18;
-        g.fillStyle = '#ffffff';
-        g.beginPath();
-        const o = rnd() * C;
-        g.moveTo(x + o, y);
-        g.lineTo(x + o + 26, y);
-        g.lineTo(x + o - 30, y + C);
-        g.lineTo(x + o - 56, y + C);
-        g.closePath();
-        g.clip();
-        g.fillRect(x, y, C, C);
-        g.restore();
-      }
-    }
-  }
-  // spandrels (floor slabs) and mullions
-  for (let row = 0; row < 4; row++) {
-    g.fillStyle = 'rgba(70,120,170,0.55)';
-    g.fillRect(0, row * C + C - 10, S, 10);
-    g.fillStyle = 'rgba(255,255,255,0.3)';
-    g.fillRect(0, row * C + C - 10, S, 1);
-  }
-  g.fillStyle = 'rgba(234,244,251,0.8)';
-  for (let col = 0; col < 8; col++) g.fillRect(col * (C / 2) - (col % 2 ? 1 : 2), 0, col % 2 ? 2 : 4, S);
-  return toTexture(c);
-}
-
-// White residential tower: punched windows with balconies.
-export function apartmentTexture(seed = 2) {
-  const S = 512, C = 128;
-  const c = makeCanvas(S), g = c.getContext('2d');
-  const rnd = mulberry32(seed);
-  g.fillStyle = '#eef1f4';
-  g.fillRect(0, 0, S, S);
-  for (let row = 0; row < 4; row++) {
-    for (let col = 0; col < 4; col++) {
-      const x = col * C, y = row * C;
-      g.fillStyle = '#dde3e8';
-      g.fillRect(x, y, 5, C);
-      const k = 0.85 + rnd() * 0.3;
-      const grad = g.createLinearGradient(x, y + 20, x, y + 94);
-      grad.addColorStop(0, `rgb(${150 * k},${186 * k},${214 * k})`);
-      grad.addColorStop(1, `rgb(${58 * k},${88 * k},${120 * k})`);
-      g.fillStyle = '#ffffff';
-      g.fillRect(x + 14, y + 16, 102, 82);
-      g.fillStyle = grad;
-      g.fillRect(x + 18, y + 20, 94, 74);
-      g.fillStyle = 'rgba(255,255,255,0.25)';
-      g.fillRect(x + 18, y + 20, 94, 10);
-      g.fillStyle = '#ffffff';
-      g.fillRect(x + 64, y + 20, 3, 74);
-      if (rnd() < 0.35) {
-        g.fillStyle = `rgba(245,240,226,${0.5 + rnd() * 0.4})`;
-        g.fillRect(x + 20 + (rnd() < 0.5 ? 0 : 48), y + 22, 44, 70);
-      }
-      // balcony slab and its shadow
-      g.fillStyle = '#fbfcfd';
-      g.fillRect(x + 6, y + 98, 120, 12);
-      g.fillStyle = '#b7c1ca';
-      g.fillRect(x + 6, y + 110, 120, 5);
-    }
-  }
-  return toTexture(c);
-}
-
-// Office block: ribbon windows between white spandrels.
-export function officeTexture(seed = 3) {
-  const S = 512, C = 128;
-  const c = makeCanvas(S), g = c.getContext('2d');
-  const rnd = mulberry32(seed);
-  g.fillStyle = '#f3f6f8';
-  g.fillRect(0, 0, S, S);
-  for (let row = 0; row < 4; row++) {
-    const y = row * C;
-    const grad = g.createLinearGradient(0, y + 34, 0, y + 112);
-    grad.addColorStop(0, '#c6f1ff');
-    grad.addColorStop(0.5, '#64c3e6');
-    grad.addColorStop(1, '#2f8db8');
+  for (let col = 0; col < COLS; col++) {
+    const x = col * W;
+    const k = 0.96 + rnd() * 0.06;
+    const grad = g.createLinearGradient(x, 0, x + W, 0);
+    grad.addColorStop(0, `rgb(${150 * k},${205 * k},${245})`);
+    grad.addColorStop(0.5, `rgb(${185 * k},${228 * k},${255})`);
+    grad.addColorStop(1, `rgb(${120 * k},${180 * k},${235 * k})`);
     g.fillStyle = grad;
-    g.fillRect(0, y + 34, S, 78);
-    for (let i = 0; i < 16; i++) {
-      if (rnd() < 0.3) {
-        g.fillStyle = `rgba(255,255,255,${0.1 + rnd() * 0.15})`;
-        g.fillRect(i * 32, y + 34, 32, 78);
-      }
-    }
-    g.fillStyle = '#e7eef2';
-    for (let i = 0; i < 16; i++) g.fillRect(i * 32, y + 34, 3, 78);
-    g.fillStyle = '#c9d6de';
-    g.fillRect(0, y + 112, S, 4);
+    g.fillRect(x, 0, W, S);
+  }
+  // long soft sky reflections running down the glass
+  for (let i = 0; i < 5; i++) {
+    const x = rnd() * S, w = 30 + rnd() * 90;
+    const grad = g.createLinearGradient(x, 0, x + w, 0);
+    grad.addColorStop(0, 'rgba(255,255,255,0)');
+    grad.addColorStop(0.5, `rgba(255,255,255,${0.25 + rnd() * 0.3})`);
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(x, 0, w, S);
+  }
+  // faint floor lines
+  for (let row = 0; row < 4; row++) {
+    g.fillStyle = 'rgba(40,90,150,0.18)';
+    g.fillRect(0, row * 128 + 124, S, 4);
+  }
+  // mullions
+  for (let col = 0; col < COLS; col++) {
+    g.fillStyle = 'rgba(245,250,255,0.95)';
+    g.fillRect(col * W, 0, 3, S);
+    g.fillStyle = 'rgba(40,90,150,0.15)';
+    g.fillRect(col * W + 3, 0, 1, S);
   }
   return toTexture(c);
 }
@@ -375,29 +304,6 @@ export function softDotTexture() {
   g.fillStyle = grad;
   g.fillRect(0, 0, S, S);
   return toTexture(c, { repeat: false });
-}
-
-// Glossy hair: soft strands running from the crown.
-export function hairTexture() {
-  const S = 256;
-  const c = makeCanvas(S), g = c.getContext('2d');
-  const rnd = mulberry32(43);
-  const grad = g.createLinearGradient(0, 0, 0, S);
-  grad.addColorStop(0, '#5cc4ff');
-  grad.addColorStop(1, '#1a7fd6');
-  g.fillStyle = grad;
-  g.fillRect(0, 0, S, S);
-  for (let i = 0; i < 260; i++) {
-    const x = rnd() * S;
-    const l = rnd() < 0.5 ? 'rgba(10,70,150,0.35)' : 'rgba(190,235,255,0.35)';
-    g.strokeStyle = l;
-    g.lineWidth = 1 + rnd() * 2;
-    g.beginPath();
-    g.moveTo(x, 0);
-    g.bezierCurveTo(x + (rnd() - 0.5) * 20, S * 0.4, x + (rnd() - 0.5) * 30, S * 0.7, x + (rnd() - 0.5) * 24, S);
-    g.stroke();
-  }
-  return toTexture(c);
 }
 
 // The sun's starburst, used by the lens-flare overlay.

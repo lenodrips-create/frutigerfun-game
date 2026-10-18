@@ -42,7 +42,7 @@ function saveSettings(s) {
 // A touch more saturation and a soft vignette, for that glossy postcard look.
 const GradeShader = {
   name: 'AeroGrade',
-  uniforms: { tDiffuse: { value: null }, saturation: { value: 1.12 }, vignette: { value: 0.22 } },
+  uniforms: { tDiffuse: { value: null }, saturation: { value: 1.12 }, vignette: { value: 0.08 } },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
     void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
@@ -71,18 +71,18 @@ class Game {
     this.canvas = document.getElementById('scene');
     const r = (this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: 'high-performance' }));
     r.toneMapping = THREE.NeutralToneMapping;
-    r.toneMappingExposure = 1.0;
+    r.toneMappingExposure = 1.25;
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
     r.setSize(innerWidth, innerHeight, false);
 
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog(SKY_COLORS.horizon.clone(), 260, 1700);
+    this.scene.fog = new THREE.Fog(SKY_COLORS.horizon.clone(), 450, 2400);
     this.camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.15, 8000);
     this.sunDir = new THREE.Vector3(-0.5, 0.5, 0.56).normalize();
 
-    this.hemi = new THREE.HemisphereLight(0xdcf4ff, 0xa6d47c, 1.9);
-    this.sun = new THREE.DirectionalLight(0xfff5e2, 2.3);
+    this.hemi = new THREE.HemisphereLight(0xe4f7ff, 0xb2dc88, 2.3);
+    this.sun = new THREE.DirectionalLight(0xfff8ea, 2.6);
     this.sun.castShadow = true;
     const sc = this.sun.shadow.camera;
     sc.left = sc.bottom = -75;
@@ -159,7 +159,7 @@ class Game {
     env.add(ground);
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this.scene.environment = pmrem.fromScene(env, 0.02, 0.1, 500).texture;
-    this.scene.environmentIntensity = 0.6;
+    this.scene.environmentIntensity = 0.75;
     pmrem.dispose();
   }
 
@@ -167,7 +167,7 @@ class Game {
     const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: 4 });
     this.composer = new EffectComposer(this.renderer, rt);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.3, 0.55, 0.92);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.24, 0.55, 1.05);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new ShaderPass(GradeShader));
     this.composer.addPass(new OutputPass());

@@ -56,6 +56,17 @@ export function circlePts(cx, cz, r, n) {
   return pts;
 }
 
+export function ellipsePts(cx, cz, rx, rz, n, rot = 0) {
+  const pts = [];
+  const c = Math.cos(rot), s = Math.sin(rot);
+  for (let i = 0; i < n; i++) {
+    const a = -(i / n) * Math.PI * 2;
+    const x = Math.cos(a) * rx, z = Math.sin(a) * rz;
+    pts.push([cx + x * c - z * s, cz + x * s + z * c]);
+  }
+  return pts;
+}
+
 export function roundedRectPts(cx, cz, w, d, r, seg = 4) {
   r = Math.min(r, w / 2 - 0.01, d / 2 - 0.01);
   const hw = w / 2 - r, hd = d / 2 - r;
@@ -92,8 +103,17 @@ export function addPrism(b, pts, y0, y1, color, o = {}) {
     const L = Math.hypot(x1 - x0, z1 - z0) || 1;
     segN.push([-(z1 - z0) / L, (x1 - x0) / L, L]);
   }
+  // o.slope = [sx, sz]: a sliced top, y1 + sx * x + sz * z (relative to the centroid)
+  let cx = 0, cz = 0;
+  for (const [x, z] of pts) { cx += x; cz += z; }
+  cx /= n; cz /= n;
+  const [sx, sz] = o.slope ?? [0, 0];
+  const top = (x, z) => y1 + sx * (x - cx) + sz * (z - cz);
+  // o.topColor: walls fade from `color` at the bottom to this at the top
+  const span = Math.max(1, (o.fadeTo ?? y1) - yBase);
+  const shade = (y) => (o.topColor ? color.clone().lerp(o.topColor, Math.min(1, Math.max(0, (y - yBase) / span))) : color);
   let acc = 0;
-  const v0 = (y0 - yBase) / tileH + vOff, v1 = (y1 - yBase) / tileH + vOff;
+  const v0 = (y0 - yBase) / tileH + vOff;
   for (let i = 0; i < n; i++) {
     const [x0, z0] = pts[i], [x1, z1] = pts[(i + 1) % n];
     const [nx, nz, L] = segN[i];
@@ -116,20 +136,20 @@ export function addPrism(b, pts, y0, y1, color, o = {}) {
     }
     const u0 = acc / tileW + uOff, u1 = (acc + L) / tileW + uOff;
     acc += L;
-    const A = b.vert(x0, y0, z0, ax, 0, az, u0, v0, color);
-    const B = b.vert(x1, y0, z1, bx, 0, bz, u1, v0, color);
-    const C = b.vert(x1, y1, z1, bx, 0, bz, u1, v1, color);
-    const D = b.vert(x0, y1, z0, ax, 0, az, u0, v1, color);
+    const t0 = top(x0, z0), t1 = top(x1, z1);
+    const A = b.vert(x0, y0, z0, ax, 0, az, u0, v0, shade(y0));
+    const B = b.vert(x1, y0, z1, bx, 0, bz, u1, v0, shade(y0));
+    const C = b.vert(x1, t1, z1, bx, 0, bz, u1, (t1 - yBase) / tileH + vOff, shade(t1));
+    const D = b.vert(x0, t0, z0, ax, 0, az, u0, (t0 - yBase) / tileH + vOff, shade(t0));
     b.quad(A, B, C, D);
   }
   if (o.roof !== false) {
     const rb = o.roofBuilder ?? b;
     const rc = o.roofColor ?? color;
-    let cx = 0, cz = 0;
-    for (const [x, z] of pts) { cx += x; cz += z; }
-    cx /= n; cz /= n;
-    const C = rb.vert(cx, y1, cz, 0, 1, 0, cx / 8, cz / 8, rc);
-    const ring = pts.map(([x, z]) => rb.vert(x, y1, z, 0, 1, 0, x / 8, z / 8, rc));
+    const nl = Math.hypot(sx, 1, sz);
+    const nx = -sx / nl, ny = 1 / nl, nz = -sz / nl;
+    const C = rb.vert(cx, top(cx, cz), cz, nx, ny, nz, cx / 8, cz / 8, rc);
+    const ring = pts.map(([x, z]) => rb.vert(x, top(x, z), z, nx, ny, nz, x / 8, z / 8, rc));
     for (let i = 0; i < n; i++) rb.tri(C, ring[i], ring[(i + 1) % n]);
   }
   return acc;

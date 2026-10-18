@@ -83,7 +83,7 @@ function paintPark(aoSpots) {
   };
   for (const p of paths) stroke(p, p.width + 1.1, 'rgba(96,120,64,0.45)');
   for (const p of paths) stroke(p, p.width + 0.35, 'rgb(205,198,178)');
-  for (const p of paths) stroke(p, p.width, p.kind === 'promenade' ? 'rgb(236,233,224)' : 'rgb(230,222,200)');
+  for (const p of paths) stroke(p, p.width, p.kind === 'promenade' ? 'rgb(218,215,206)' : 'rgb(214,206,184)');
   // paving joints on the promenade
   const promenade = paths[0];
   g.strokeStyle = 'rgba(170,165,150,0.5)';
