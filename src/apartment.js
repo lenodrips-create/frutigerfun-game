@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { GeoBuilder, addPrism, roundedRectPts } from './geometry.js';
+import { GeoBuilder, addPrism, addTube, roundedRectPts } from './geometry.js';
 import { Colliders } from './physics.js';
 import { mulberry32 } from './util.js';
 
@@ -12,6 +12,7 @@ import { mulberry32 } from './util.js';
 // blue circle outside one of the towers.
 
 const W = 20, D = 17, H = 4.8, CORNER = 3;
+const DESK_SCALE = 1.7;
 const TAU = Math.PI * 2;
 
 // ---- a glowing blue circle you step into -----------------------------------
@@ -226,9 +227,15 @@ export class Apartment {
     const strip = new GeoBuilder();
     addPrism(strip, roundedRectPts(0, 0, W - 0.08, D - 0.08, CORNER - 0.04, 8), 0.02, 0.1, new THREE.Color(1, 1, 1), { roof: false, smooth: true });
     add(strip.build(), new THREE.MeshStandardMaterial({ color: 0xbfe8ff, emissive: 0x2a9cff, emissiveIntensity: 1.4, side: THREE.BackSide }), 0, 0, 0, false);
-    const sky = add(new THREE.CircleGeometry(1.7, 48), M.warm, 1.5, H - 0.02, -2.6, false);
+    // rounded edges where the walls meet the ceiling
+    const fillet = new GeoBuilder();
+    const edge = roundedRectPts(0, 0, W, D, CORNER, 8);
+    const pts = [...edge, edge[0]].map(([x, z]) => new THREE.Vector3(x, H, z));
+    addTube(fillet, pts, pts.map(() => 0.9), 16, new THREE.Color(1, 1, 1));
+    add(fillet.build(), new THREE.MeshStandardMaterial({ color: 0xe8f1f8, roughness: 0.4 }), 0, 0, 0, false);
+    const sky = add(new THREE.CircleGeometry(2.4, 64), M.warm, 1.5, H - 0.02, -2.6, false);
     sky.rotation.x = Math.PI / 2;
-    const cove = add(new THREE.TorusGeometry(2.1, 0.06, 10, 72), M.glow, 1.5, H - 0.05, -2.6, false);
+    const cove = add(new THREE.TorusGeometry(2.8, 0.07, 10, 96), M.glow, 1.5, H - 0.05, -2.6, false);
     cove.rotation.x = Math.PI / 2;
 
     // round window onto the skyline, set in a deep blue surround
@@ -250,16 +257,42 @@ export class Apartment {
     Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 30 });
     sun.shadow.bias = -0.0005;
     scene.add(sun, sun.target);
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xb9d9f5, 0.75));
+    scene.add(new THREE.HemisphereLight(0xf0f8ff, 0x8fc4f2, 0.8));
+    for (const [x, z] of [[-7, -4], [5, -6], [0, 4], [7.5, 2.5], [6.5, 6.5]]) {
+      const blue = new THREE.PointLight(0x58b4ff, 9, 12, 2);
+      blue.position.set(x, 3.6, z);
+      scene.add(blue);
+    }
     const fill = new THREE.PointLight(0x7cc6ff, 12, 14, 2);
     fill.position.set(-7.5, 2.6, -1.5);
     scene.add(fill);
 
-    // shelving wall: a glossy blue panel with lit white shelves
+    // shelving wall: a tall arched blue niche with lit white shelves
     const sx = -W / 2 + 0.2;
-    add(new RoundedBoxGeometry(0.36, 3.3, 5.6, 4, 0.16), M.blue, sx, 1.95, -0.8);
+    const arch = (w, h) => {
+      const s = new THREE.Shape();
+      s.moveTo(-w / 2, 0);
+      s.lineTo(w / 2, 0);
+      s.lineTo(w / 2, h - w / 2);
+      s.absarc(0, h - w / 2, w / 2, 0, Math.PI, false);
+      s.lineTo(-w / 2, 0);
+      return new THREE.ExtrudeGeometry(s, { depth: 0.36, bevelEnabled: true, bevelSize: 0.08, bevelThickness: 0.08, bevelSegments: 4, curveSegments: 40 });
+    };
+    const niche = add(arch(5.6, 4.3), M.blue, sx - 0.2, 0.15, -0.8);
+    niche.rotation.y = Math.PI / 2;
+    // a second arched niche on the back wall, left of the window
+    const niche2 = add(arch(2.6, 3.9), M.blue, -4.4, 0.15, -D / 2 + 0.05);
+    for (const y of [1.1, 1.9, 2.7]) {
+      add(new RoundedBoxGeometry(2.2, 0.07, 0.5, 2, 0.03), M.white, -4.4, y, -D / 2 + 0.55);
+      add(new THREE.BoxGeometry(2.1, 0.025, 0.04), M.glow, -4.4, y - 0.05, -D / 2 + 0.8, false);
+      add(new THREE.SphereGeometry(0.13, 20, 14), M.glass, -4.9, y + 0.17, -D / 2 + 0.5, false);
+      add(new THREE.CylinderGeometry(0.09, 0.07, 0.16, 16), M.white, -3.9, y + 0.12, -D / 2 + 0.5);
+      add(new THREE.IcosahedronGeometry(0.14, 1), M.leaf, -3.9, y + 0.28, -D / 2 + 0.5);
+    }
+    this.colliders.addBox(-5.9, -D / 2, -2.9, -D / 2 + 0.9, 4);
+    void niche2;
     const rnd = mulberry32(12);
-    for (const y of [0.95, 1.75, 2.55, 3.3]) {
+    for (const y of [0.95, 1.75, 2.55, 3.35]) {
       add(new RoundedBoxGeometry(0.52, 0.07, 5.0, 2, 0.03), M.white, sx + 0.3, y, -0.8);
       add(new THREE.BoxGeometry(0.04, 0.025, 4.9), M.glow, sx + 0.52, y - 0.05, -0.8, false);
       for (let z = -3.0; z < 1.4; z += 0.55 + rnd() * 0.4) {
@@ -380,11 +413,13 @@ export class Apartment {
     const bondi = new THREE.MeshPhysicalMaterial({ color: 0x0aa9ba, roughness: 0.12, clearcoat: 1, transparent: true, opacity: 0.82, emissive: 0x05505a, emissiveIntensity: 0.25 });
     const shell = new THREE.MeshPhysicalMaterial({ color: 0xe8edef, roughness: 0.2, clearcoat: 1, transparent: true, opacity: 0.95 });
     const keyMat = new THREE.MeshStandardMaterial({ color: 0x2b3236, roughness: 0.5 });
-    const dx = W / 2 - 1.15, dz = 2.2;
+    const dx = W / 2 - 1.4, dz = 2.2;
     const desk = new THREE.Group();
     desk.position.set(dx, 0, dz);
     desk.rotation.y = -Math.PI / 2; // desk front faces into the room (-x)
+    desk.scale.setScalar(DESK_SCALE);
     this.scene.add(desk);
+    this.desk = desk;
     const put = (geo, mat, x, y, z, cast = true) => {
       const m = new THREE.Mesh(geo, mat);
       m.position.set(x, y, z);
@@ -421,6 +456,7 @@ export class Apartment {
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.225), new THREE.MeshBasicMaterial({ map: screenTexture(), toneMapped: false }));
     screen.position.set(0, 0.25, 0.181);
     pc.add(screen);
+    this.screen = screen;
     const bezel = new THREE.Mesh(new THREE.PlaneGeometry(0.33, 0.255), new THREE.MeshStandardMaterial({ color: 0x1a2328, roughness: 0.2 }));
     bezel.position.set(0, 0.25, 0.1805);
     pc.add(bezel);
@@ -468,8 +504,20 @@ export class Apartment {
     put(new RoundedBoxGeometry(0.5, 0.5, 0.04, 2, 0.02), acrylic, 0, 0.75, 0.98, false);
     for (const x of [-0.22, 0.22]) for (const z of [0.55, 0.95]) put(new THREE.CylinderGeometry(0.015, 0.015, 0.46, 8), acrylic, x, 0.23, z, false);
 
-    this.colliders.addBox(dx - 0.45, dz - 0.95, dx + 0.45, dz + 0.95, 1.2);
-    this.colliders.addCircle(dx - 0.75, dz, 0.35, 1, false);
+    const S = DESK_SCALE;
+    this.colliders.addBox(dx - 0.42 * S, dz - 0.92 * S, dx + 0.42 * S, dz + 0.92 * S, 1.2 * S);
+    // where you sit: on the clear chair, facing the screen
+    this.scene.updateMatrixWorld(true);
+    const seatPos = desk.localToWorld(new THREE.Vector3(0, 0.5, 0.78));
+    const toDesk = desk.localToWorld(new THREE.Vector3(0, 0.5, 0)).sub(seatPos);
+    this.seat = { pos: seatPos, facing: Math.atan2(toDesk.x, toDesk.z) };
+  }
+
+  // The screen's four corners in world space (for the on-screen overlay).
+  screenCorners() {
+    const s = this.screen;
+    s.updateWorldMatrix(true, false);
+    return [[-0.15, 0.1125], [0.15, 0.1125], [0.15, -0.1125], [-0.15, -0.1125]].map(([x, y]) => s.localToWorld(new THREE.Vector3(x, y, 0)));
   }
 
   // Build the room's reflections once a renderer exists.

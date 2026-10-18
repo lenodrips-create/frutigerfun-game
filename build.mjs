@@ -3,8 +3,12 @@
 //   node build.mjs --watch   rebuild on change
 //   node build.mjs --serve   rebuild on change and serve on http://localhost:8080
 import * as esbuild from 'esbuild';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+
+// The Scratch runtime for the apartment computer is loaded on demand from dist/.
+mkdirSync('dist', { recursive: true });
+copyFileSync('node_modules/@turbowarp/scaffolding/dist/scaffolding-min.js', 'dist/scaffolding-min.js');
 
 const dev = process.argv.includes('--watch') || process.argv.includes('--serve');
 const common = { bundle: true, minify: !dev, target: ['es2022'], logLevel: 'info', legalComments: 'eof' };

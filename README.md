@@ -54,7 +54,15 @@ Touch a bubble to pop it. The counter is at the top left.
   a curved translucent blue sofa round an oval table, glowing shelves,
   hanging bubble chairs, glass pendant lights, and a clear desk with a
   Bondi Blue all-in-one computer. The blue circle by the door takes you
-  back outside.
+  back outside. An arrow at the top of the screen points the way there.
+- **The computer:** walk up to the chair and press **E** to sit. The
+  computer runs the
+  [Windows 7 Simulator](https://scratch.mit.edu/projects/554316635) Scratch
+  project with TurboWarp, using the settings from its TurboWarp packager
+  file (480x360, 60 fps, your loading screen, click to start). Press
+  **Esc** to stand up. The project downloads from Scratch the first time
+  you sit, so this needs the online version (GitHub Pages or a local web
+  server), not the file opened from disk.
 - **Cursors:** pixel-art arrow and pointing-hand cursors in the menus.
 - **Grass:** real grass blades that sway in the wind cover the lawns and
   fields around you.
@@ -68,7 +76,8 @@ Touch a bubble to pop it. The counter is at the top left.
 | | |
 | --- | --- |
 | ![Downtown](screenshots/02-downtown.jpg) | ![Sunflowers and a wind turbine](screenshots/03-meadow.jpg) |
-| ![The apartment](screenshots/04-apartment.jpg) | ![The computer desk](screenshots/05-imac.jpg) |
+| ![The apartment](screenshots/04-apartment.jpg) | ![The computer desk](screenshots/05-desk.jpg) |
+| ![Sitting at the computer](screenshots/08-computer.jpg) | ![The way to the apartment](screenshots/07-guide.jpg) |
 | ![The apartment entrance](screenshots/06-entrance.jpg) | |
 
 ## The character
@@ -113,6 +122,7 @@ npm run serve    # rebuild on change and serve on http://localhost:8080
 | `src/player.js` | movement, collisions, third-person camera |
 | `src/ui.js`, `src/style.css` | menus, windows and HUD |
 | `src/windmills.js` | wind turbines |
+| `src/computer.js` | the apartment computer running the Scratch project |
 | `src/apartment.js` | the apartment interior, its furniture and the blue entrance circles |
 | `src/cursors.css` | the pixel-art cursors |
 | `src/audio.js` | music (`assets/music.mp3`) and sound effects |
@@ -121,6 +131,8 @@ npm run serve    # rebuild on change and serve on http://localhost:8080
 
 - [three.js](https://threejs.org/), MIT License
   ([licenses/three.js-LICENSE.txt](licenses/three.js-LICENSE.txt))
+- [TurboWarp scaffolding](https://github.com/TurboWarp/scaffolding), Mozilla
+  Public License 2.0 ([licenses/turbowarp-scaffolding-LICENSE.txt](licenses/turbowarp-scaffolding-LICENSE.txt))
 - [Nunito](https://github.com/googlefonts/nunito) typeface, SIL Open Font
   License 1.1 ([licenses/Nunito-OFL.txt](licenses/Nunito-OFL.txt))
 - Character design reference:

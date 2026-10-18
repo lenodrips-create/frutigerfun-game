@@ -72,6 +72,7 @@ export class UI {
     const g = this.game;
     if (e.code === 'Escape') {
       if (this.modal) return this.closeModal();
+      if (g.seated) return g.standUp();
       if (g.state === 'playing') return g.pause();
       if (g.state === 'paused' && performance.now() - g.pausedAt > 400) return g.resume();
       return;
@@ -173,6 +174,19 @@ export class UI {
 
   setFps(text) {
     $('hud-fps').textContent = text;
+  }
+
+  prompt(text) {
+    const el = $('hud-prompt');
+    if (el.textContent !== text) el.textContent = text;
+  }
+
+  guide(angle, text) {
+    const el = $('hud-guide');
+    el.classList.toggle('hidden', angle === null);
+    if (angle === null) return;
+    $('guide-arrow').style.transform = `rotate(${angle}rad)`;
+    if ($('guide-text').textContent !== text) $('guide-text').textContent = text;
   }
 
   hint(visible) {

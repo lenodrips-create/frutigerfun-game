@@ -12,6 +12,7 @@ import { Windmills } from './windmills.js';
 import { Grass } from './grass.js';
 import { buildCity, APARTMENT_DOOR } from './city.js';
 import { Apartment, makePortal } from './apartment.js';
+import { Computer } from './computer.js';
 import { buildTerrain } from './terrain.js';
 import { Sky, LensFlare, SKY_COLORS, makeSkyMaterial } from './sky.js';
 import { Lake } from './water.js';
@@ -105,12 +106,12 @@ class Game {
     this.focus = new THREE.Vector3();
     addEventListener('resize', () => this.resize());
     document.addEventListener('pointerlockchange', () => {
-      if (!document.pointerLockElement && this.state === 'playing' && this.hadLock) this.pause();
+      if (!document.pointerLockElement && this.state === 'playing' && this.hadLock && !this.seated) this.pause();
       this.hadLock = !!document.pointerLockElement;
-      this.ui.hint(this.state === 'playing' && !document.pointerLockElement);
+      this.ui.hint(this.state === 'playing' && !this.seated && !document.pointerLockElement);
     });
     this.canvas.addEventListener('click', () => {
-      if (this.state === 'playing' && !document.pointerLockElement) this.canvas.requestPointerLock?.();
+      if (this.state === 'playing' && !this.seated && !document.pointerLockElement) this.canvas.requestPointerLock?.();
     });
   }
 
@@ -150,6 +151,19 @@ class Game {
     this.scene.add(this.doorPortal);
     this.inside = false;
     this.portalArmed = true;
+    this.seated = false;
+    this.computer = new Computer(document.getElementById('pc-screen'));
+    document.getElementById('pc-screen').addEventListener('mousedown', () => this.computer.click());
+    addEventListener('keydown', (e) => {
+      if (e.code === 'KeyE' && this.state === 'playing' && !this.seated && this.nearSeat()) this.sit();
+    });
+    // a tall, faint beacon so the entrance can be found from across the park
+    const beacon = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.6, 1.1, 90, 24, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0x6cc8ff, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }),
+    );
+    beacon.position.set(this.door.x, 45, this.door.z);
+    this.scene.add(beacon);
     await this.character.tryLoadModel('assets/character.glb');
     this.input = new Input(this.canvas);
     this.player = new Player(this.character, this.camera, this.colliders, this.input, this.settings);
@@ -275,6 +289,77 @@ class Game {
     this.renderPass.scene = scene;
   }
 
+  nearSeat() {
+    if (!this.inside) return false;
+    const s = this.apartment.seat.pos, p = this.player.pos;
+    return Math.hypot(p.x - s.x, p.z - s.z) < 2.2;
+  }
+
+  // Sit on the clear chair: the camera glides to the screen and the
+  // computer comes alive.
+  sit() {
+    this.seated = true;
+    this.seatT = 0;
+    if (document.pointerLockElement) document.exitPointerLock();
+    const s = this.apartment.seat;
+    this.player.place(s.pos.x, s.pos.z, s.facing);
+    this.player.pos.y = s.pos.y - 0.05;
+    this.player.syncCharacter();
+    this.character.state.speed = 0;
+    this.seatFrom = { pos: this.camera.position.clone(), look: this.player.target.clone() };
+    this.ui.hint(false);
+  }
+
+  standUp() {
+    this.seated = false;
+    this.computer.show(false);
+    this.input.consume();
+    this.ui.prompt('');
+    const s = this.apartment.seat;
+    const back = new THREE.Vector3(Math.sin(s.facing), 0, Math.cos(s.facing)).multiplyScalar(-1.3);
+    this.player.place(s.pos.x + back.x, s.pos.z + back.z, s.facing);
+    this.player.updateCamera(0, true);
+  }
+
+  // Where the camera sits to look straight at the computer screen.
+  screenView() {
+    const c = this.apartment.screenCorners();
+    const center = c[0].clone().add(c[2]).multiplyScalar(0.5);
+    const normal = new THREE.Vector3().subVectors(c[1], c[0]).cross(new THREE.Vector3().subVectors(c[3], c[0])).normalize();
+    if (normal.dot(new THREE.Vector3().subVectors(this.player.pos, center)) < 0) normal.negate();
+    const height = c[0].distanceTo(c[3]);
+    const dist = height / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * 0.62);
+    return { pos: center.clone().addScaledVector(normal, dist), look: center, corners: c };
+  }
+
+  updateSeated(dt) {
+    this.seatT += dt;
+    const k = ease(clamp(this.seatT / 0.8, 0, 1));
+    const v = this.screenView();
+    this.camera.position.lerpVectors(this.seatFrom.pos, v.pos, k);
+    this.camera.lookAt(new THREE.Vector3().lerpVectors(this.seatFrom.look, v.look, k));
+    this.camera.updateMatrixWorld();
+    if (k >= 1) {
+      this.computer.show(true);
+      const pts = v.corners.map((p) => p.clone().project(this.camera));
+      const xs = pts.map((p) => (p.x * 0.5 + 0.5) * innerWidth), ys = pts.map((p) => (-p.y * 0.5 + 0.5) * innerHeight);
+      const x0 = Math.min(...xs), y0 = Math.min(...ys);
+      this.computer.place(x0, y0, Math.max(...xs) - x0, Math.max(...ys) - y0);
+      this.ui.prompt('Esc to stand up');
+    }
+  }
+
+  // Arrow at the top of the HUD pointing the way to the apartment.
+  updateGuide() {
+    const show = this.state === 'playing' && !this.inside;
+    const d = new THREE.Vector3(this.door.x - this.player.pos.x, 0, this.door.z - this.player.pos.z);
+    const dist = d.length();
+    if (!show || dist < 6) return this.ui.guide(null);
+    const yaw = this.player.camYaw;
+    const ahead = -(d.x * Math.sin(yaw) + d.z * Math.cos(yaw)), side = d.x * Math.cos(yaw) - d.z * Math.sin(yaw);
+    this.ui.guide(Math.atan2(side, ahead), `Apartment · ${Math.round(dist)} m`);
+  }
+
   checkPortals() {
     const p = this.player.pos;
     const target = this.inside ? this.apartment.exit : this.door;
@@ -287,7 +372,10 @@ class Game {
   }
 
   enterMenu(first = false) {
+    if (this.seated) this.standUp();
     if (this.inside) this.setInside(false);
+    this.ui.prompt('');
+    this.ui.guide(null);
     this.state = 'menu';
     this.stateTime = 0;
     const { spot, f, right } = MENU;
@@ -402,9 +490,15 @@ class Game {
       }
       this.focus.copy(p.pos);
     } else if (st === 'playing') {
-      p.update(dt, true);
-      this.checkPortals();
-      p.updateCamera(dt);
+      if (this.seated) {
+        this.updateSeated(dt);
+      } else {
+        p.update(dt, true);
+        p.updateCamera(dt);
+        this.checkPortals();
+        this.ui.prompt(this.nearSeat() ? 'Press E to sit at the computer' : '');
+      }
+      this.updateGuide();
       this.focus.copy(p.pos);
     } else if (st === 'paused') {
       p.updateCamera(dt);
