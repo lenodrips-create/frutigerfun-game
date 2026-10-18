@@ -113,7 +113,7 @@ export class Multiplayer {
   handle(msg) {
     switch (msg.type) {
       case 'welcome':
-        this.me = { id: msg.id, name: msg.name };
+        this.me = { id: msg.id, name: msg.name, room: msg.room };
         for (const p of msg.players || []) this.add(p.id, p.name);
         break;
       case 'join':
@@ -124,6 +124,7 @@ export class Multiplayer {
         break;
       case 'states':
         for (const s of msg.players || []) {
+          if (s.id === this.me?.id) continue;
           const r = this.remotes.get(s.id) || this.add(s.id, `Player ${s.id}`);
           r.target = s;
         }
@@ -160,7 +161,8 @@ export class Multiplayer {
   updateLabel() {
     if (!this.me) return;
     const n = this.remotes.size + 1;
-    this.game.ui.online(`You are ${this.me.name} · ${n} online`);
+    const room = this.me.room ? `Server ${this.me.room} · ` : '';
+    this.game.ui.online(`${room}You are ${this.me.name} · ${n} online`);
   }
 
   update(dt) {
